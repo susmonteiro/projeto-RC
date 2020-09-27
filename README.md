@@ -8,6 +8,11 @@
     - [FS](#file-server)
     - [PD](#personal-device-application)
     - [User](#user-application)
+- [Communication Protocols Specification](#communication-protocols-specification)
+    - [PD-AS](#pd-as-udp)
+    - [User-AS](#user-as-tcp)
+    - [AS-FS](#as-fs-udp)
+    - [User-FS](#user-fs-tcp)
 - [Project Submission](#project-submission)
 - [Checklist](#checklist)
 - [Questions](#questions)
@@ -79,6 +84,8 @@ For any single transaction with the *FS*, the **user** must first request a new 
     
 </details>
 
+---
+---
 ## Project Specification
 
 ---
@@ -190,6 +197,72 @@ Once the *User* application program is running, it establishes a **TCP session**
 - [ ] `exit` – the User application terminates after closing any open TCP connections.
 
 ---
+---
+## Communication Protocols Specification
+
+---
+### PD-AS UDP
+Request and reply messages:
+- [ ] `REG UID pass PDIP PDport` - registration
+- [ ] `RRG status` - check if registration successful
+
+- [ ] `VLC UID VC Fop [Fname]` - after the request for the second factor authentication, the *AS* sends to the *PD* this information 
+    - this information should be displayed by the *PD* application
+
+- [ ] `RVC status` - reply to receiving the *VC* with `OK` or `NOK`
+- [ ] `UNR UID pass` - following the `exit` command, the *PD* asks the *AS* to unregister this **user**
+- [ ] `RUN status` - check if unresgistration successful
+
+> If an unexpected protocol message is received, the reply is `ERR`
+
+> In the above messages the separation between any two items consists of a single space and each request or reply message ends with the character “\n”.
+
+---
+### User-AS TCP
+Request and reply messages:
+- [ ] `LOG UID pass` - following the login command, the *User* sends the *AS* server a message with *UID* and *pass* for validation
+- [ ] `RLO status` - check if login successful
+- [ ] `REQ UID RID Fop [Fname]` - after the `req` command, request sent to *AS* to perform the *Fop*. This message initiates the second factor authentication procedure 
+- [ ] `RRQ status`
+- [ ] `AUT UID RID VC` - after checking the *VC* on the *PD*, the *User* sends this message to *AS* to complete 2FA
+- [ ] `RAU TID` - *AS* confirms or not the success of 2FA
+
+> If an unexpected protocol message is received, the reply is `ERR`
+
+> In the above messages the separation between any two items consists of a single space and each request or reply message ends with the character “\n”.
+
+---
+### AS-FS UDP
+Request and reply messages:
+- [ ] `VLD UID TID` - *FS* validates operation with *AS*
+- [ ] `CNF UID TID Fop [Fname]` - reply to the `VLD` message
+
+> If an unexpected protocol message is received, the reply is `ERR`
+
+> In the above messages the separation between any two items consists of a single space and each request or reply message ends with the character “\n”.
+
+---
+### User-FS TCP
+Request and reply messages:
+- [ ] `LST UID TID` - request from *User* to listing files
+- [ ] `RLS N[ Fname Fsize]*` - listed files from *FS* to *User*
+- [ ] `RTV UID TID Fname` - request from *User* to retrieving file
+- [ ] `RRT status [Fsize data]` - retrieved file from *FS* to *User*
+- [ ] `UPL UID TID Fname Fsize data` - request from *User* to upload file
+- [ ] `RUP status` - success of upload message from *FS* to *User*
+- [ ] `DEL UID TID Fname` - request from *User* to delete file
+- [ ] `RDL status` - success of delete message from *FS* to *User*
+- [ ] `REM UID TID` - request from *User* to remove account
+- [ ] `RRM status` - success of remove message from *FS* to *User*
+
+> If an unexpected protocol message is received, the reply is `ERR`
+
+> In the above messages the separation between any two items consists of a single space and each request or reply message ends with the character “\n”.
+
+- [ ] `` -
+
+---
+---
 ## Project Submission
 - include the programs implementing the *User*, the *PD*, the *AS* server and the *FS* server
 - include de *Makefile*, which should compile the code and place the executables in the current directory with the `make` command
@@ -200,8 +273,10 @@ Once the *User* application program is running, it establishes a **TCP session**
 > submition by email until **November 13, at 23:59 PM**
 
 ---
+---
 ## CHECKLIST
 
+---
 ---
 ## Questions:
 
