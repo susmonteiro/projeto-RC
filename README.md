@@ -259,8 +259,6 @@ Request and reply messages:
 
 > In the above messages the separation between any two items consists of a single space and each request or reply message ends with the character “\n”.
 
-- [ ] `` -
-
 ---
 ---
 ## Project Submission
