@@ -61,7 +61,7 @@ void udpConnect() {
 }
 
 void registration(char* uid, char* pass) {
-    int n;
+    int n, len;
     char message[64];
 
     if (strlen(uid) != 5 || strlen(pass) != 8) {
@@ -69,9 +69,11 @@ void registration(char* uid, char* pass) {
         return;
     }
 
-    sprintf(message, "REG %s %s %s %s\n", uid, pass, pdip, pdport);
+    len = sprintf(message, "REG %s %s %s %s\n", uid, pass, pdip, pdport);
+    if (len < 0) errorExit("sprintf()");
+    
     printf("our message: %s", message);
-    n = sendto(fd_udp_client, message, strlen(message)*sizeof(char), 0, res_udp_client->ai_addr, res_udp_client->ai_addrlen);
+    n = sendto(fd_udp_client, message, len*sizeof(char), 0, res_udp_client->ai_addr, res_udp_client->ai_addrlen);
     if (n == -1) errorExit("sendto()");
 }
 
