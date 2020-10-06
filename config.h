@@ -1,0 +1,9 @@
+#define TRUE 1
+#define FALSE 0
+#define STDIN 0
+#define ASPORT "58011"
+#define PDPORT "5000"
+#define FSPORT "1"
+#define ASIP "tejo.tecnico.ulisboa.pt"
+#define PDIP "localhost"
+#define FSIP "localhost"
