@@ -4,6 +4,6 @@
 #define ASPORT "58011"
 #define PDPORT "5000"
 #define FSPORT "1"
-#define ASIP "tejo.tecnico.ulisboa.pt"
+#define ASIP "localhost"
 #define PDIP "localhost"
 #define FSIP "localhost"

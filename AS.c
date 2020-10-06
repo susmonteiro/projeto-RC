@@ -36,31 +36,31 @@ void udpOpenConnection() {
     int errcode;
     ssize_t n;
     fd_udp = socket(AF_INET, SOCK_DGRAM, 0);
-    if (fd_udp == -1) errorExit("");
+    if (fd_udp == -1) errorExit("UDP server: socket()");
     memset(&hints_udp, 0, sizeof hints_udp);
     hints_udp.ai_family = AF_INET;          //IPv4
     hints_udp.ai_socktype = SOCK_DGRAM;     //UDP socket
     hints_udp.ai_flags=AI_PASSIVE;
 
     errcode = getaddrinfo(NULL, asport, &hints_udp, &res_udp);
-    if (errcode != 0) errorExit("getaddrinfo()");
+    if (errcode != 0) errorExit("UDP server: getaddrinfo()");
 
     n = bind(fd_udp, res_udp->ai_addr, res_udp->ai_addrlen);
-    if (n == -1) errorExit("bind()");
+    if (n == -1) errorExit("UDP server: bind()");
 }
 
 void udpConnect() {
     int n;
 
     fd_udp_client = socket(AF_INET, SOCK_DGRAM, 0);
-    if (fd_udp_client == -1) errorExit("socket()");
+    if (fd_udp_client == -1) errorExit("UDP client: socket()");
 
     memset(&hints_udp_client, 0, sizeof hints_udp_client);
     hints_udp_client.ai_family=AF_INET; // IPv4
     hints_udp_client.ai_socktype=SOCK_DGRAM; // UDP socket
 
     n = getaddrinfo(pdip, pdport, &hints_udp_client, &res_udp_client);
-    if (n != 0) errorExit("getaddrinfo()");
+    if (n != 0) errorExit("UDP client: getaddrinfo()");
 }
 
 char* login(char* uid, char* pass) {
@@ -77,9 +77,9 @@ char* request(char* uid, char* rid, char* fop, char* fname) {
     sprintf(message, "VLC %s %s %s %s\n", uid, vc, fop, fname);
 
     n = sendto(fd_udp_client, message, strlen(message)*sizeof(char), 0, res_udp_client->ai_addr, res_udp_client->ai_addrlen);
-    if (n == -1) errorExit("sendto()");
+    if (n == -1) errorExit("request: sendto()");
     n = recvfrom(fd_udp_client, reply, 32, 0, (struct sockaddr*) &addr_udp_client, &addrlen_udp_client);
-    if (n == -1) errorExit("recvfrom()");
+    if (n == -1) errorExit("request: recvfrom()");
 
     if (!strcmp(reply, "RVC OK\n")) {
         return "RRQ OK\n";
@@ -101,7 +101,7 @@ void userSession(int fd) {
     char command[5], arg1[32], arg2[32], arg3[32], arg4[32];
 
     n = read(fd, buffer, 128 * sizeof(char));
-    if (n == -1) errorExit("read()");
+    if (n == -1) errorExit("userSession: read()");
     sscanf(buffer, "%s %s %s %s %s", command, arg1, arg2, arg3, arg4);
 
     if (!strcmp(command, "LOG")) {
@@ -112,7 +112,7 @@ void userSession(int fd) {
         strcpy(buffer, secondAuthentication(arg1, arg2, arg3));
     }
     n = write(fd, buffer, strlen(buffer)*sizeof(char));
-    if (n == -1) errorExit("write()");
+    if (n == -1) errorExit("userSession: write()");
 }
 
 void tcpOpenConnection() {
@@ -122,7 +122,7 @@ void tcpOpenConnection() {
     char buffer[128];
 
     fd_tcp = socket(AF_INET,SOCK_STREAM,0);
-    if(fd_tcp == -1) errorExit("socket()");
+    if(fd_tcp == -1) errorExit("TCP: socket()");
 
     memset(&hints_tcp, 0, sizeof hints_tcp);
     hints_tcp.ai_family = AF_INET;
@@ -130,12 +130,12 @@ void tcpOpenConnection() {
     hints_tcp.ai_flags = AI_PASSIVE;
 
     errcode = getaddrinfo(NULL, ASPORT, &hints_tcp, &res_tcp);
-    if(errcode != 0) errorExit("getaddrinfo()");
+    if(errcode != 0) errorExit("TCP: getaddrinfo()");
 
     n = bind(fd_tcp, res_tcp->ai_addr, res_tcp->ai_addrlen);
-    if(n == -1) errorExit("bind()");
+    if(n == -1) errorExit("TCP: bind()");
     
-    if(listen(fd_tcp, 5) == -1) errorExit("listen()");
+    if(listen(fd_tcp, 5) == -1) errorExit("TCP: listen()");
     fd_array = (int*)malloc(sizeof(int*));
 
     /* freeaddrinfo(res_tcp); // TODO move this
@@ -145,7 +145,7 @@ void tcpOpenConnection() {
 
 char* registration(char* uid, char* pass, char* pdip_new, char* pdport_new) {
     printf("unimplemented\n");
-    printf("PD: new user, UID = %s", uid);
+    printf("PD: new user, UID = %s\n", uid);
     strcpy(pdip, pdip_new);
     strcpy(pdport, pdport_new);
     udpConnect();
@@ -171,7 +171,7 @@ char* applyCommand(char* message) {
 }
 
 int main(int argc, char* argv[]) {
-    char buffer[34];
+    char buffer[128];
     int i, n, maxfdp1;
     
     if (argc < MINARGS || argc > MAXARGS) {
@@ -190,9 +190,9 @@ int main(int argc, char* argv[]) {
     }
 
     udpOpenConnection();
-    tcpOpenConnection(); // TODO move to select
+    tcpOpenConnection();
 
-    printf("i connected yey");
+    printf("i connected yey\n");
 
     FD_ZERO(&rset); 
     maxfdp1 = MAX(fd_tcp, fd_udp) + 1;
@@ -204,14 +204,14 @@ int main(int argc, char* argv[]) {
         select(maxfdp1, &rset, NULL, NULL, NULL);
 
         if (FD_ISSET(fd_udp, &rset)) {
-            n = recvfrom(fd_udp, buffer, 34, 0, (struct sockaddr*) &addr_udp, &addrlen_udp);
-            if (n == -1) errorExit("recvfrom()");
+            n = recvfrom(fd_udp, buffer, 128, 0, (struct sockaddr*) &addr_udp, &addrlen_udp);
+            if (n == -1) errorExit("main: recvfrom()");
             printf("received message from pd\n");
-
-            n = sendto(fd_udp, applyCommand(buffer), n, 0, (struct sockaddr*) &addr_udp, addrlen_udp);
-            if (n == -1) errorExit("sendto()");
+            
+            n = sendto(fd_udp, applyCommand(buffer), 9, 0, (struct sockaddr*) &addr_udp, addrlen_udp);
+            if (n == -1) errorExit("main: sendto()");
         } if (FD_ISSET(fd_tcp, &rset)) {
-            if((fd_array[numClients++] = accept(fd_tcp, (struct sockaddr *) &addr_tcp, &addrlen_tcp)) == -1) errorExit("accept()");
+            if((fd_array[numClients++] = accept(fd_tcp, (struct sockaddr *) &addr_tcp, &addrlen_tcp)) == -1) errorExit("main: accept()");
 
             fd_array = (int*)realloc(fd_array, numClients + 1);
             userSession(fd_array[numClients - 1]);
