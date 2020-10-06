@@ -8,7 +8,6 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <sys/select.h>
-#include <pthread.h>
 #include "config.h"
 
 #define MAXARGS 4
@@ -17,14 +16,14 @@
 #define MAX(a, b) a*(a>b) + b*(b>a)
 
 int numClients = 0;
-pthread_t *tcp_threads;
 
-int fd_udp, fd_udp_client;
+int fd_udp, fd_udp_client, fd_tcp;
+int* fd_array;
 fd_set rset;
 char verbose = FALSE;
-socklen_t addrlen_udp, addrlen_udp_client;
-struct addrinfo hints_udp, *res_udp, hints_udp_client, *res_udp_client;
-struct sockaddr_in addr_udp, addr_udp_client;
+socklen_t addrlen_udp, addrlen_udp_client, addrlen_tcp;
+struct addrinfo hints_udp, *res_udp, hints_udp_client, *res_udp_client, hints_tcp, *res_tcp;
+struct sockaddr_in addr_udp, addr_udp_client, addr_tcp;
 
 char asport[8], pdip[32], pdport[8];
 
@@ -37,17 +36,17 @@ void udpOpenConnection() {
     int errcode;
     ssize_t n;
     fd_udp = socket(AF_INET, SOCK_DGRAM, 0);
-    if (fd_udp == -1) exit(1);
+    if (fd_udp == -1) errorExit("");
     memset(&hints_udp, 0, sizeof hints_udp);
     hints_udp.ai_family = AF_INET;          //IPv4
     hints_udp.ai_socktype = SOCK_DGRAM;     //UDP socket
     hints_udp.ai_flags=AI_PASSIVE;
 
     errcode = getaddrinfo(NULL, asport, &hints_udp, &res_udp);
-    if (errcode != 0) exit(1);
+    if (errcode != 0) errorExit("getaddrinfo()");
 
     n = bind(fd_udp, res_udp->ai_addr, res_udp->ai_addrlen);
-    if (n == -1) exit(1);
+    if (n == -1) errorExit("bind()");
 }
 
 void udpConnect() {
@@ -96,14 +95,13 @@ char* secondAuthentication(char* uid, char* rid, char* vc) {
     return "RAU TID";   // TODO tid
 }
 
-void *userSession(void* fd_tcp) {
+void userSession(int fd) {
     int n;
     char buffer[128];
     char command[5], arg1[32], arg2[32], arg3[32], arg4[32];
-    
-    int fd = *((int*) fd_tcp);
 
-    read(fd, buffer, 128 * sizeof(char));
+    n = read(fd, buffer, 128 * sizeof(char));
+    if (n == -1) errorExit("read()");
     sscanf(buffer, "%s %s %s %s %s", command, arg1, arg2, arg3, arg4);
 
     if (!strcmp(command, "LOG")) {
@@ -118,16 +116,13 @@ void *userSession(void* fd_tcp) {
 }
 
 void tcpOpenConnection() {
-    int fd_tcp, newfd, errcode;
+    int errcode;
 
     ssize_t n;
-    socklen_t addrlen_tcp;
-    struct addrinfo hints_tcp, *res_tcp;
-    struct sockaddr_in addr_tcp;
     char buffer[128];
 
     fd_tcp = socket(AF_INET,SOCK_STREAM,0);
-    if(fd_tcp == -1) exit(1);
+    if(fd_tcp == -1) errorExit("socket()");
 
     memset(&hints_tcp, 0, sizeof hints_tcp);
     hints_tcp.ai_family = AF_INET;
@@ -135,23 +130,16 @@ void tcpOpenConnection() {
     hints_tcp.ai_flags = AI_PASSIVE;
 
     errcode = getaddrinfo(NULL, ASPORT, &hints_tcp, &res_tcp);
-    if(errcode != 0) exit(1);
+    if(errcode != 0) errorExit("getaddrinfo()");
 
     n = bind(fd_tcp, res_tcp->ai_addr, res_tcp->ai_addrlen);
-    if(n == -1) exit(1);
+    if(n == -1) errorExit("bind()");
     
-    if(listen(fd_tcp, 5) == -1) exit(1);
-    tcp_threads = (pthread_t*)malloc(sizeof(pthread_t*));
+    if(listen(fd_tcp, 5) == -1) errorExit("listen()");
+    fd_array = (int*)malloc(sizeof(int*));
 
-    while(1) {
-        if((newfd = accept(fd_tcp, (struct sockaddr *) &addr_tcp, &addrlen_tcp)) == -1) errorExit("accept()");
-
-        pthread_create(&tcp_threads[numClients++], NULL, userSession, (void*) &newfd);
-        tcp_threads = (pthread_t*)realloc(tcp_threads, numClients);
-    }
-
-    freeaddrinfo(res_tcp);
-    close(fd_tcp);
+    /* freeaddrinfo(res_tcp); // TODO move this
+    close(fd_tcp); */
 }
 
 
@@ -207,11 +195,11 @@ int main(int argc, char* argv[]) {
     printf("i connected yey");
 
     FD_ZERO(&rset); 
-    maxfdp1 = MAX(STDIN, fd_udp) + 1;
+    maxfdp1 = MAX(fd_tcp, fd_udp) + 1;
 
     while(1) {
-        FD_SET(STDIN, &rset);
         FD_SET(fd_udp, &rset);
+        FD_SET(fd_tcp, &rset);
 
         select(maxfdp1, &rset, NULL, NULL, NULL);
 
@@ -222,6 +210,21 @@ int main(int argc, char* argv[]) {
 
             n = sendto(fd_udp, applyCommand(buffer), n, 0, (struct sockaddr*) &addr_udp, addrlen_udp);
             if (n == -1) errorExit("sendto()");
+        } if (FD_ISSET(fd_tcp, &rset)) {
+            if((fd_array[numClients++] = accept(fd_tcp, (struct sockaddr *) &addr_tcp, &addrlen_tcp)) == -1) errorExit("accept()");
+
+            fd_array = (int*)realloc(fd_array, numClients + 1);
+            userSession(fd_array[numClients - 1]);
+
+            for (i=0; i<numClients; i++) {
+                maxfdp1 = MAX(maxfdp1, fd_array[i]);
+            }
+        }
+
+        for (i=0; i<numClients; i++) {
+            if (FD_ISSET(fd_array[i], &rset)) {
+                userSession(fd_array[i]);
+            }
         }
     }
 
