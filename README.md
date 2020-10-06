@@ -274,6 +274,9 @@ Request and reply messages:
 ---
 ## CHECKLIST
 - implement verbose as
+- SIGPIPE (não deixar que o servidor morra quando tenta fazer um write() e não consegue falar com o cliente)
+- SIGALARM para quando a resposta demora demasiado tempo a chegar)
+- SIGINT para quando se carrega no ctrl+c o programa terminar ordeiramente
 
 ---
 ---
