@@ -33,17 +33,17 @@ void udpOpenConnection() {
     int errcode;
     ssize_t n;
     fd_udp = socket(AF_INET, SOCK_DGRAM, 0);
-    if (fd_udp == -1) exit(1);
+    if (fd_udp == -1) errorExit("socket()");
     memset(&hints_udp, 0, sizeof hints_udp);
     hints_udp.ai_family = AF_INET;          //IPv4
     hints_udp.ai_socktype = SOCK_DGRAM;     //UDP socket
     hints_udp.ai_flags=AI_PASSIVE;
 
-    errcode = getaddrinfo(NULL, asport, &hints_udp, &res_udp);
-    if (errcode != 0) exit(1);
+    errcode = getaddrinfo(NULL, pdport, &hints_udp, &res_udp);
+    if (errcode != 0) errorExit("getaddrinfo()");
 
     n = bind(fd_udp, res_udp->ai_addr, res_udp->ai_addrlen);
-    if (n == -1) exit(1);
+    if (n == -1) errorExit("bind()");
 }
 
 void udpConnect() {
@@ -155,13 +155,13 @@ int main(int argc, char* argv[]) {
         }
         
         if (FD_ISSET(STDIN, &rset)) {
-                scanf("%s", command);
-                if (!strcmp(command, "reg")) {
-                    scanf("%s %s", uid, pass);
-                    registration(uid, pass);
-                } else if (!strcmp(command, "exit")) {
-                    unregistration();
-                } else printf("ERR1\n");    /* debug */ // TODO remove this
+            scanf("%s", command);
+            if (!strcmp(command, "reg")) {
+                scanf("%s %s", uid, pass);
+                registration(uid, pass);
+            } else if (!strcmp(command, "exit")) {
+                unregistration();
+            } else printf("ERR1\n");    /* debug */ // TODO remove this
         }
     }
 
