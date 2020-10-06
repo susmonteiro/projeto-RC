@@ -94,7 +94,7 @@ For any single transaction with the *FS*, the **user** must first request a new 
 #### Specification:
 The program implementing the *AS* application should be invoked using the command:
 
-        ./pd PDIP [-d PDport] [-n ASIP] [-p ASport]
+       ./AS [-p ASport] [-v]
 
 <details><summary>Legend</summary>
 
@@ -273,6 +273,7 @@ Request and reply messages:
 ---
 ---
 ## CHECKLIST
+- implement verbose as
 
 ---
 ---
