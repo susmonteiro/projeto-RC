@@ -59,7 +59,7 @@ void login(char* uid, char* pass) {
 void requestFile() {
     char op;
     char* file;
-    scanf("%c", op);
+    scanf("%c", &op);
     switch(op) {
         case 'L':
             printf("does list\n");

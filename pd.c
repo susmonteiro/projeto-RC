@@ -77,14 +77,16 @@ void registration(char* uid, char* pass) {
     if (n == -1) errorExit("sendto()");
 }
 
-char* validateRequest(char* message) {
-    char command[5], uid[32], vc[32], fname[32], reply[128], fop;
+char * validateRequest(char* message) {
+    char command[5], uid[32], vc[32], fname[32], reply[128];
+    char op;
     printf("message from AS: %s", message);
-    sscanf(message, "%s %s %s %s", command, uid, vc, fop);
+    sscanf(message, "%s %s %s %c", command, uid, vc, &op);
     if (!strcmp(command, "VLC") && strlen(vc) == 4) {
-        if (fop == 'R' || fop == 'U' || fop == 'D')
+        if (op == 'R' || op == 'U' || op == 'D')
             scanf("%s", fname);
         printf("%s", message);
+        return message;
     } else {
         return "ERR";
     }
