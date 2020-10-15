@@ -14,7 +14,7 @@
 #define MAXARGS 8
 #define MINARGS 2
 
-#define MAX(a, b) a*(a>b) + b*(b>a)
+#define MAX(a, b) a*(a>b) + b*(b>=a)
 
 int fd_udp_client, fd_udp;
 fd_set rset;

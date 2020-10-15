@@ -14,7 +14,7 @@
 #define MAXARGS 9
 #define MINARGS 1
 
-#define MAX(a, b) a*(a>b) + b*(b>a)
+#define MAX(a, b) a*(a>b) + b*(b>=a)
 
 int fd;
 fd_set rset;
