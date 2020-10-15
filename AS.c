@@ -1,6 +1,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <errno.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -28,7 +29,7 @@ struct sockaddr_in addr_udp, addr_udp_client, addr_tcp;
 char asport[8], pdip[32], pdport[8];
 
 void errorExit(char* errorMessage) {
-    printf("ERROR: %s\n", errorMessage);
+    printf("ERROR: %s: %s\n", errorMessage, strerror(errno));
     exit(1);
 }
 
