@@ -147,7 +147,7 @@ void tcpOpenConnection() {
 char* registration(char* uid, char* pass, char* pdip_new, char* pdport_new) {
     printf("unimplemented\n");
     printf("PD: new user, UID = %s\n", uid);
-    strcpy(pdip, pdip_new)
+    strcpy(pdip, pdip_new);
     strcpy(pdport, pdport_new);
     udpConnect();
     return "RRG OK\n";
@@ -196,6 +196,7 @@ int main(int argc, char* argv[]) {
     printf("i connected yey\n");
 
     FD_ZERO(&rset); 
+    maxfdp1 = MAX(fd_tcp, fd_udp) + 1;
 
     while(1) {
         FD_SET(fd_udp, &rset);
@@ -204,12 +205,6 @@ int main(int argc, char* argv[]) {
         for (i=0; i<numClients; i++)
             FD_SET(fd_array[i], &rset);
 
-        maxfdp1 = MAX(fd_tcp, fd_udp) + 1;
-
-        for (i=0; i<numClients; i++) {
-            maxfdp1 = MAX(maxfdp1, fd_array[i]);
-        }
-
         select(maxfdp1, &rset, NULL, NULL, NULL);
 
         if (FD_ISSET(fd_udp, &rset)) {
@@ -217,7 +212,6 @@ int main(int argc, char* argv[]) {
             if (n == -1) errorExit("main: recvfrom()");
             printf("received message from pd\n");
 
-            
             n = sendto(fd_udp, applyCommand(buffer), 32, 0, (struct sockaddr*) &addr_udp, addrlen_udp);
             if (n == -1) errorExit("main: sendto()");
         } if (FD_ISSET(fd_tcp, &rset)) {
@@ -226,6 +220,9 @@ int main(int argc, char* argv[]) {
             fd_array = (int*)realloc(fd_array, numClients + 1);
             userSession(fd_array[numClients - 1]);
 
+            for (i=0; i<numClients; i++) {
+                maxfdp1 = MAX(maxfdp1, fd_array[i]);
+            }
         }
 
         for (i=0; i<numClients; i++) {
