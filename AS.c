@@ -48,6 +48,8 @@ void udpOpenConnection() {
 
     n = bind(fd_udp, res_udp->ai_addr, res_udp->ai_addrlen);
     if (n == -1) errorExit("UDP server: bind()");
+    
+    addrlen_udp = sizeof(addr_udp);
 }
 
 void udpConnect() {

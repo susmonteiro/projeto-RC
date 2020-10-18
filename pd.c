@@ -19,7 +19,6 @@
 int fd_udp_client, fd_udp;
 fd_set rset;
 struct addrinfo hints_udp_client, *res_udp_client, hints_udp, *res_udp;
-struct sockaddr_in addr_udp;
 socklen_t addrlen_udp;
 struct sockaddr_in addr_udp;
 
@@ -45,6 +44,8 @@ void udpOpenConnection() {
 
     n = bind(fd_udp, res_udp->ai_addr, res_udp->ai_addrlen);
     if (n == -1) errorExit("bind()");
+    
+    addrlen_udp = sizeof(addr_udp);
 }
 
 void udpConnect() {
