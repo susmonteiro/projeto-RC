@@ -11,6 +11,7 @@
 #include <sys/select.h>
 #include <time.h>
 #include "config.h"
+#include "connection.h"
 #include "error.h"
 
 #define MAXARGS 9

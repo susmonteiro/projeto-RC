@@ -20,6 +20,7 @@ The PD application can also receive a command to exit, unregistering the user.
 #include <netdb.h>
 #include <sys/select.h>
 #include "config.h"
+#include "connection.h"
 #include "error.h"
 
 #define MAXARGS 8
@@ -36,39 +37,6 @@ struct sockaddr_in addr_udp;
 char pdip[32], pdport[8], asip[32], asport[8];
 char command[6], uid[7], pass[10], buffer[32];
 int maxfdp1;
-
-void udpOpenConnection() {
-    int errcode;
-    ssize_t n;
-    fd_udp = socket(AF_INET, SOCK_DGRAM, 0);
-    if (fd_udp == -1) errorExit("socket()");
-    memset(&hints_udp, 0, sizeof hints_udp);
-    hints_udp.ai_family = AF_INET;          //IPv4
-    hints_udp.ai_socktype = SOCK_DGRAM;     //UDP socket
-    hints_udp.ai_flags=AI_PASSIVE;
-
-    errcode = getaddrinfo(NULL, pdport, &hints_udp, &res_udp);
-    if (errcode != 0) errorExit("getaddrinfo()");
-
-    n = bind(fd_udp, res_udp->ai_addr, res_udp->ai_addrlen);
-    if (n == -1) errorExit("bind()");
-    
-    addrlen_udp = sizeof(addr_udp);
-}
-
-void udpConnect() {
-    int n;
-
-    fd_udp_client = socket(AF_INET, SOCK_DGRAM, 0);
-    if (fd_udp_client == -1) errorExit("socket()");
-
-    memset(&hints_udp_client, 0, sizeof hints_udp_client);
-    hints_udp_client.ai_family=AF_INET; // IPv4
-    hints_udp_client.ai_socktype=SOCK_DGRAM; // UDP socket
-
-    n = getaddrinfo(asip, asport, &hints_udp_client, &res_udp_client);
-    if (n != 0) errorExit("getaddrinfo()");
-}
 
 void unregistration() {
     freeaddrinfo(res_udp_client);
@@ -208,8 +176,9 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    udpOpenConnection();
-    udpConnect();
+    udpOpenConnection(pdport, &fd_udp, &res_udp);
+    addrlen_udp = sizeof(addr_udp);
+    udpConnect(asip, asport, &fd_udp_client, &res_udp_client);
 
     signal(SIGINT, endPD);
     signal(SIGALRM, snooze);

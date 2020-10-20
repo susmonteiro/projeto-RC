@@ -10,6 +10,7 @@
 #include <netdb.h>
 #include <sys/select.h>
 #include "config.h"
+#include "connection.h"
 #include "error.h"
 
 #define MAXARGS 4
@@ -28,39 +29,6 @@ struct addrinfo hints_udp, *res_udp, hints_udp_client, *res_udp_client, hints_tc
 struct sockaddr_in addr_udp, addr_udp_client, addr_tcp;
 
 char asport[8], pdip[32], pdport[8];
-
-void udpOpenConnection() {
-    int errcode;
-    ssize_t n;
-    fd_udp = socket(AF_INET, SOCK_DGRAM, 0);
-    if (fd_udp == -1) errorExit("UDP server: socket()");
-    memset(&hints_udp, 0, sizeof hints_udp);
-    hints_udp.ai_family = AF_INET;          //IPv4
-    hints_udp.ai_socktype = SOCK_DGRAM;     //UDP socket
-    hints_udp.ai_flags=AI_PASSIVE;
-
-    errcode = getaddrinfo(NULL, asport, &hints_udp, &res_udp);
-    if (errcode != 0) errorExit("UDP server: getaddrinfo()");
-
-    n = bind(fd_udp, res_udp->ai_addr, res_udp->ai_addrlen);
-    if (n == -1) errorExit("UDP server: bind()");
-    
-    addrlen_udp = sizeof(addr_udp);
-}
-
-void udpConnect() {
-    int n;
-
-    fd_udp_client = socket(AF_INET, SOCK_DGRAM, 0);
-    if (fd_udp_client == -1) errorExit("UDP client: socket()");
-
-    memset(&hints_udp_client, 0, sizeof hints_udp_client);
-    hints_udp_client.ai_family=AF_INET; // IPv4
-    hints_udp_client.ai_socktype=SOCK_DGRAM; // UDP socket
-
-    n = getaddrinfo(pdip, pdport, &hints_udp_client, &res_udp_client);
-    if (n != 0) errorExit("UDP client: getaddrinfo()");
-}
 
 char* login(char* uid, char* pass) {
     printf("unimplemented\n");
@@ -158,7 +126,7 @@ char* registration(char* uid, char* pass, char* pdip_new, char* pdport_new) {
     printf("PD: new user, UID = %s\n", uid);
     strcpy(pdip, pdip_new);
     strcpy(pdport, pdport_new);
-    udpConnect();
+    udpConnect(pdip, pdport, &fd_udp_client, &res_udp_client);
     return "RRG OK\n";
 }
 
@@ -176,7 +144,7 @@ char* applyCommand(char* message) {
     } else if (!strcmp(command, "UNR")) {
         return unregistration(arg1, arg2);
     } else {
-        return "ERR";
+        return "ERR\n";
     }
 }
 
@@ -199,7 +167,8 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    udpOpenConnection();
+    udpOpenConnection(asport, &fd_udp, &res_udp);
+    addrlen_udp = sizeof(addr_udp);
     tcpOpenConnection();
 
     printf("i connected yey\n");
