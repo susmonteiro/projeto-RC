@@ -125,6 +125,7 @@ int main(int argc, char* argv[]) {
         if (FD_ISSET(fd, &rset)) {
             n = read(fd, reply, 9);
             if (n == -1) errorExit("read()");
+            reply[n] = '\0';
 
             printf("server reply: %s", reply); /* debug */ // TODO remove this
 

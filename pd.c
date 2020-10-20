@@ -140,6 +140,7 @@ int main(int argc, char* argv[]) {
         if (FD_ISSET(fd_udp_client, &rset)) {
             n = recvfrom(fd_udp_client, reply, 9, 0, (struct sockaddr*) &addr_udp, &addrlen_udp);
             if (n == -1) errorExit("recvfrom()");
+            reply[n] = '\0';
 
             printf("server reply: %s", reply); /* debug */ // TODO remove this
 
@@ -154,6 +155,7 @@ int main(int argc, char* argv[]) {
         if (FD_ISSET(fd_udp, &rset)) {
             n = recvfrom(fd_udp, buffer, 32, 0, (struct sockaddr*) &addr_udp, &addrlen_udp);
             if (n == -1) errorExit("recvfrom()");
+            buffer[n] = '\0';
             printf("received message from as\n");
 
             n = sendto(fd_udp, validateRequest(buffer), n, 0, (struct sockaddr*) &addr_udp, addrlen_udp);

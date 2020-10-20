@@ -83,6 +83,7 @@ char* request(char* uid, char* rid, char* fop, char* fname) {
     if (n == -1) errorExit("request: sendto()");
     n = recvfrom(fd_udp_client, reply, 32, 0, (struct sockaddr*) &addr_udp_client, &addrlen_udp_client);
     if (n == -1) errorExit("request: recvfrom()");
+    reply[n] = '\0';
 
     if (!strcmp(reply, "RVC OK\n")) {
         return "RRQ OK\n";
@@ -105,6 +106,8 @@ void userSession(int fd) {
 
     n = read(fd, buffer, 128 * sizeof(char));
     if (n == -1) errorExit("userSession: read()");
+    buffer[n] = '\0';
+
     sscanf(buffer, "%s %s %s %s %s", command, arg1, arg2, arg3, arg4);
 
     if (!strcmp(command, "LOG")) {
@@ -212,6 +215,7 @@ int main(int argc, char* argv[]) {
         if (FD_ISSET(fd_udp, &rset)) {
             n = recvfrom(fd_udp, buffer, 128, 0, (struct sockaddr*) &addr_udp, &addrlen_udp);
             if (n == -1) errorExit("main: recvfrom()");
+            buffer[n] = '\0';
             printf("received message from pd\n");
 
             n = sendto(fd_udp, applyCommand(buffer), 32, 0, (struct sockaddr*) &addr_udp, addrlen_udp);
