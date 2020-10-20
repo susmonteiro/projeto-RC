@@ -107,15 +107,19 @@ char* secondAuthentication(char* uid, char* rid, char* vc) {
 
 void userSession(int fd) {
     int n;
-    char buffer[128];
-    char command[5], arg1[32], arg2[32], arg3[32], arg4[32];
+    char buffer[128], command[5], arg1[32], arg2[32], arg4[32], arg3[32];
 
     n = read(fd, buffer, 128 * sizeof(char));
     if (n == -1) errorExit("userSession: read()");
     buffer[n] = '\0';
 
-    sscanf(buffer, "%s %s %s %s %s", command, arg1, arg2, arg3, arg4);
+    sscanf(buffer, "%s %s %s %s", command, arg1, arg2, arg3);
 
+    if (!strcmp(arg3, "D") || !strcmp(arg3, "R") || !strcmp(arg3, "U")) {
+        sscanf(buffer, "%s %s %s %s %s", command, arg1, arg2, arg3, arg4);
+    } else {
+        arg4[0] = '\0';
+    }
     if (!strcmp(command, "LOG")) {
         strcpy(buffer, login(arg1, arg2));
     } else if (!strcmp(command, "REQ")) {
@@ -123,15 +127,13 @@ void userSession(int fd) {
     } else if (!strcmp(command, "AUT")) {
         strcpy(buffer, secondAuthentication(arg1, arg2, arg3));
     }
-    n = write(fd, buffer, strlen(buffer)*sizeof(char));
-    if (n == -1) errorExit("userSession: write()");
+    n = write(fd_udp_client, buffer, strlen(buffer)*sizeof(char));
+    if (n == -1) errorExit("userSession: write()"); 
 }
 
 void tcpOpenConnection() {
     int errcode;
-
     ssize_t n;
-    char buffer[128];
 
     fd_tcp = socket(AF_INET,SOCK_STREAM,0);
     if(fd_tcp == -1) errorExit("TCP: socket()");
@@ -170,7 +172,7 @@ char* unregistration(char* uid, char* pass) {
 }
 
 char* applyCommand(char* message) {
-    char command[5], arg1[32], arg2[32], arg3[32], arg4[32], reply[128];
+    char command[5], arg1[32], arg2[32], arg3[32], arg4[32];
     printf("message from PD: %s", message);
     sscanf(message, "%s %s %s %s %s", command, arg1, arg2, arg3, arg4);
     if (!strcmp(command, "REG")) {
