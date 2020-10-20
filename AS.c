@@ -10,6 +10,7 @@
 #include <netdb.h>
 #include <sys/select.h>
 #include "config.h"
+#include "error.h"
 
 #define MAXARGS 4
 #define MINARGS 1
@@ -27,11 +28,6 @@ struct addrinfo hints_udp, *res_udp, hints_udp_client, *res_udp_client, hints_tc
 struct sockaddr_in addr_udp, addr_udp_client, addr_tcp;
 
 char asport[8], pdip[32], pdport[8];
-
-void errorExit(char* errorMessage) {
-    printf("ERROR: %s: %s\n", errorMessage, strerror(errno));
-    exit(1);
-}
 
 void udpOpenConnection() {
     int errcode;

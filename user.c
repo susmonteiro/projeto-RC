@@ -9,12 +9,16 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <sys/select.h>
+#include <time.h>
 #include "config.h"
+#include "error.h"
 
 #define MAXARGS 9
 #define MINARGS 1
 
 #define MAX(a, b) a*(a>b) + b*(b>=a)
+
+time_t t;
 
 int fd;
 fd_set rset;
@@ -23,11 +27,6 @@ socklen_t addrlen;
 struct sockaddr_in addr;
 
 char fsip[32], fsport[8], asip[32], asport[8];
-
-void errorExit(char* errorMessage) {
-    printf("ERROR: %s: %s\n", errorMessage, strerror(errno));
-    exit(1);
-}
 
 void tcpConnect() {
     int n;
@@ -43,7 +42,7 @@ void tcpConnect() {
     if (n != 0) errorExit("getaddrinfo()");
 
     n = connect(fd, res->ai_addr, res->ai_addrlen);
-    if (n != -1) errorExit("connect()");
+    if (n == -1) errorExit("connect()");
 
 }
 
@@ -57,27 +56,36 @@ void login(char* uid, char* pass) {
     if (n == -1) errorExit("write()");
 }
 
-void requestFile() {
+void requestFile(char *uid) {
+    int n;
     char op;
-    char* file;
+    char file[32];
+    char message[64];
+    char rid[5];
+    
+    strcpy(rid, "1234");
+
     scanf("%c", &op);
     switch(op) {
         case 'L':
-            printf("does list\n");
+            sprintf(message, "REQ %s %s %c\n", uid, rid, op);
             break;
         case 'D':
             scanf("%s", file);
-            printf("does delete\n");
+            sprintf(message, "REQ %s %s %c %s\n", uid, rid, op, file);
             break;
         case 'R':
             scanf("%s", file);
-            printf("does retrieve\n");
+            sprintf(message, "REQ %s %s %c %s\n", uid, rid, op, file);
             break;
         case 'U':
             scanf("%s", file);
-            printf("does upload\n");
+            sprintf(message, "REQ %s %s %c %s\n", uid, rid, op, file);
         case 'X':
             printf("does remove\n");
+        printf("our message: %s", message);
+        n = write(fd, message, strlen(message)*sizeof(char));
+        if (n == -1) errorExit("write()");
     }
 }
 
@@ -86,8 +94,10 @@ void validateCode(char* vc) {
 }
 
 int main(int argc, char* argv[]) {
-    char command[6], uid[7], pass[10], reply[9], buffer[32], vc[4];
+    char command[6], uid[7], pass[10], reply[9], vc[4];
     int n, i, maxfdp1;
+
+    srand((unsigned) time(&t));
     
     if (argc < MINARGS || argc > MAXARGS) {
         printf("​Usage: %s -n ASIP] [-p ASport] [-m FSIP] [-q FSport]\n", argv[0]);
@@ -130,7 +140,7 @@ int main(int argc, char* argv[]) {
             printf("server reply: %s", reply); /* debug */ // TODO remove this
 
             if (!strcmp(reply, "RLO OK\n"))
-                printf("You are now logged in\n");
+                printf("You are now logged in.\n");
             else if (!strcmp(reply, "RLO NOK\n"))
                 printf("Login was a failureeee you a failureeee\n"); // TODO change this
             else if (!strcmp(reply, "RRQ OK\n"))
@@ -147,7 +157,7 @@ int main(int argc, char* argv[]) {
                     scanf("%s %s", uid, pass);
                     login(uid, pass);
                 } else if (!strcmp(command, "req"))
-                    requestFile();
+                    requestFile(uid);
                 else if (!strcmp(command, "val")) {
                     scanf("%s", vc);
                     validateCode(vc);
