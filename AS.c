@@ -10,8 +10,8 @@
 #include <netdb.h>
 #include <sys/select.h>
 #include "config.h"
-#include "connection.h"
-#include "error.h"
+#include "connection.c"
+#include "error.c"
 
 #define MAXARGS 4
 #define MINARGS 1
@@ -32,6 +32,7 @@ char asport[8], pdip[32], pdport[8];
 
 char* login(char* uid, char* pass) {
     printf("unimplemented\n");
+    printf("User: login ok, UID=%s\n", uid);
     return "RLO OK\n";
 }
 
@@ -66,6 +67,8 @@ char* request(char* uid, char* rid, char* fop, char* fname) {
 
 char* secondAuthentication(char* uid, char* rid, char* vc) {
     printf("unimplemented\n");
+    printf("User: UID=%s\n", uid);
+    printf("U, f1.txt, TID=2020\n");  //possivelmente vamos ter que criar um vetor de estruturas que guardam file requests para guardar os opcodes e assim (com id rid por ex.)
     return "RAU TID";   // TODO tid
 }
 

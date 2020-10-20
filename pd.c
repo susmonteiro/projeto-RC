@@ -20,8 +20,8 @@ The PD application can also receive a command to exit, unregistering the user.
 #include <netdb.h>
 #include <sys/select.h>
 #include "config.h"
-#include "connection.h"
-#include "error.h"
+#include "connection.c"
+#include "error.c"
 
 #define MAXARGS 8
 #define MINARGS 2

@@ -11,8 +11,8 @@
 #include <sys/select.h>
 #include <time.h>
 #include "config.h"
-#include "connection.h"
-#include "error.h"
+#include "connection.c"
+#include "error.c"
 
 #define MAXARGS 9
 #define MINARGS 1
@@ -57,14 +57,9 @@ void login(char* uid, char* pass) {
     if (n == -1) errorExit("write()");
 }
 
-void requestFile(char *uid) {
+void requestFile(char *uid, char* rid, char op, char *file) {
     int n;
-    char op;
-    char file[32];
     char message[64];
-    char rid[5];
-    
-    strcpy(rid, "1234");
 
     scanf("%c", &op);
     switch(op) {
@@ -82,20 +77,30 @@ void requestFile(char *uid) {
         case 'U':
             scanf("%s", file);
             sprintf(message, "REQ %s %s %c %s\n", uid, rid, op, file);
+            break;
         case 'X':
-            printf("does remove\n");
+            sprintf(message, "REQ %s %s %c\n", uid, rid, op);
+
         printf("our message: %s", message);
         n = write(fd, message, strlen(message)*sizeof(char));
         if (n == -1) errorExit("write()");
     }
 }
 
-void validateCode(char* vc) {
+void validateCode(char* uid, char*rid, char* vc) {
+    int n;
+    char message[64];
 
+    sprintf(message, "AUT %s %s %s\n \n", uid, rid, vc);
+    printf("our message: %s", message);
+    n = write(fd, message, strlen(message)*sizeof(char));
+    if (n == -1) errorExit("write()");
 }
 
 int main(int argc, char* argv[]) {
-    char command[6], uid[7], pass[10], reply[9], vc[4];
+    char command[6], uid[7], pass[10], reply[9], vc[4], rid[5], tid[5], acr[4], file[32];
+    char op;
+
     int n, i, maxfdp1;
 
     srand((unsigned) time(&t));
@@ -140,6 +145,8 @@ int main(int argc, char* argv[]) {
 
             printf("server reply: %s", reply); /* debug */ // TODO remove this
 
+            sscanf(reply, "%s %s", acr, tid);
+
             if (!strcmp(reply, "RLO OK\n"))
                 printf("You are now logged in.\n");
             else if (!strcmp(reply, "RLO NOK\n"))
@@ -148,20 +155,27 @@ int main(int argc, char* argv[]) {
                 printf("Request successful\n"); // TODO change this
             else if (!strcmp(reply, "RRQ NOK\n"))
                 printf("Request was a failureeee you a failureeee\n"); // TODO change this
+            else if (!strcmp(acr, "AUT"))
+                printf("Authenticated! (TID=%s)", tid);  /* debug */ // TODO remove this
             else
-                printf("nope, not working\n");  /* debug */ // TODO remove this
+                printf("nope, not working\n");
+            
         }
+
+        strcpy(rid, "1234");
         
         if (FD_ISSET(STDIN, &rset)) {
                 scanf("%s", command);
                 if (!strcmp(command, "login")) {
                     scanf("%s %s", uid, pass);
                     login(uid, pass);
-                } else if (!strcmp(command, "req"))
-                    requestFile(uid);
+                } else if (!strcmp(command, "req")) {
+                    scanf("%c %s", &op, file);
+                    requestFile(uid, rid, op, file);
+                }
                 else if (!strcmp(command, "val")) {
-                    scanf("%s", vc);
-                    validateCode(vc);
+                    scanf("%s %s %s", uid, rid, vc);
+                    validateCode(uid, rid, vc);
                 }
                 else printf("ERR1\n");    /* debug */ // TODO remove this
         }
