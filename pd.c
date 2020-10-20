@@ -1,8 +1,18 @@
+/*  Personal Device Application (PD)
+
+invoked with: 
+    ./pd PDIP [-d PDport] [-n ASIP] [-p ASport]
+
+Once the PD program is running, it waits for a registration command from the user.
+Then it waits for validation codes (VC) sent by the AS, which should be displayed. 
+The PD application can also receive a command to exit, unregistering the user.
+*/
+
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <errno.h>
 #include <string.h>
+#include <signal.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -10,6 +20,7 @@
 #include <netdb.h>
 #include <sys/select.h>
 #include "config.h"
+#include "error.h"
 
 #define MAXARGS 8
 #define MINARGS 2
@@ -23,11 +34,8 @@ socklen_t addrlen_udp;
 struct sockaddr_in addr_udp;
 
 char pdip[32], pdport[8], asip[32], asport[8];
-
-void errorExit(char* errorMessage) {
-    printf("ERROR: %s: %s\n", errorMessage, strerror(errno));
-    exit(1);
-}
+char command[6], uid[7], pass[10], buffer[32];
+int maxfdp1;
 
 void udpOpenConnection() {
     int errcode;
@@ -62,9 +70,19 @@ void udpConnect() {
     if (n != 0) errorExit("getaddrinfo()");
 }
 
+void unregistration() {
+    freeaddrinfo(res_udp_client);
+    close(fd_udp_client);
+    exit(0);
+}
+
+void endPD() {
+    unregistration();
+}
+
 void registration(char* uid, char* pass) {
     int n, len;
-    char message[64];
+    char message[64], reply[9];
 
     if (strlen(uid) != 5 || strlen(pass) != 8) {
         printf("ERR2\n");   /* debug */ // TODO change this
@@ -77,32 +95,98 @@ void registration(char* uid, char* pass) {
     printf("our message: %s", message);
     n = sendto(fd_udp_client, message, len*sizeof(char), 0, res_udp_client->ai_addr, res_udp_client->ai_addrlen);
     if (n == -1) errorExit("sendto()");
+
+    n = recvfrom(fd_udp_client, reply, 9, 0, (struct sockaddr*) &addr_udp, &addrlen_udp);
+    if (n == -1) errorExit("recvfrom()");
+    reply[n] = '\0';
+
+    printf("server reply: %s\n", reply); /* debug */ // TODO remove this
+
+    if (!strcmp(reply, "RRG OK\n"))
+        printf("Registration successful\n");
+    else if (!strcmp(reply, "RRG NOK\n"))
+        printf("Registration was a failureeee you a failureeee\n"); // TODO change this
+    else
+        endPD();
 }
 
 char * validateRequest(char* message) {
-    char command[5], uid[32], vc[32], fname[32], reply[128];
+    char command[5], uid[32], vc[32], fname[32], type[32];
     char op;
     printf("message from AS: %s", message);
     sscanf(message, "%s %s %s %c", command, uid, vc, &op);
-    if (!strcmp(command, "VLC") && strlen(vc) == 4) {
-        if (op == 'R' || op == 'U' || op == 'D')
-            scanf("%s", fname);
-        printf("%s", message);
-        return message;
+    if (!strcmp(command, "VLC") && strlen(vc) == 4) {   
+        switch(op) {
+        case 'L':
+            strcpy(type, "list");
+            break;
+        case 'D':
+            strcpy(type, "delete");
+            break;
+        case 'R':
+            strcpy(type, "retrieve");
+            break;
+        case 'U':
+            strcpy(type, "upload");
+        case 'X':
+            strcpy(type, "delete");
+        }
+        if (op == 'R' || op == 'U' || op == 'L' || op == 'D') {
+            sscanf(message, "%s %s %s %c %s", command, uid, vc, &op, fname);
+            sprintf(message, "VC=%s, %s:%s\n", vc, type, fname);
+        }
+        else {
+            sscanf(message, "%s %s %s %c", command, uid, vc, &op);
+            sprintf(message, "VC=%s, %s\n", vc, type); 
+        }
+        return "RVC OK\n";
     } else {
-        return "ERR";
+        return "ERR\n";
     }
 }
 
-void unregistration() {
-    freeaddrinfo(res_udp_client);
-    close(fd_udp_client);
-    exit(0);
+
+
+void fdManager() {
+    int n; 
+    while(1) {
+        FD_SET(STDIN, &rset);
+        FD_SET(fd_udp, &rset);
+
+        n = select(maxfdp1, &rset, NULL, NULL, NULL);
+        if (n == -1) errorExit("select()");
+
+        if (FD_ISSET(fd_udp, &rset)) {              // server of AS
+            n = recvfrom(fd_udp, buffer, 32, 0, (struct sockaddr*) &addr_udp, &addrlen_udp);
+            if (n == -1) errorExit("recvfrom()");
+            buffer[n] = '\0';
+            printf("received message from as: %s\n", buffer);
+
+            n = sendto(fd_udp, validateRequest(buffer), n, 0, (struct sockaddr*) &addr_udp, addrlen_udp);
+            if (n == -1) errorExit("sendto()");
+        }
+        
+        if (FD_ISSET(STDIN, &rset)) {
+            alarm(2);
+            scanf("%s", command);
+            if (!strcmp(command, "reg")) {
+                scanf("%s %s", uid, pass);
+                registration(uid, pass);
+            } else if (!strcmp(command, "exit")) {
+                unregistration();
+            } else printf("wrong command\n");
+            alarm(0);
+        }
+    }
+}
+
+void snooze(){
+    printf("alarm out\n");  /* debug */
+    fdManager();
 }
 
 int main(int argc, char* argv[]) {
-    char command[6], uid[7], pass[10], reply[9], buffer[32];
-    int n, i, maxfdp1;
+    int i;
     
     if (argc < MINARGS || argc > MAXARGS) {
         printf("​Usage: %s PDIP [-d PDport] [-n ASIP] [-p ASport]\n", argv[0]);
@@ -116,7 +200,7 @@ int main(int argc, char* argv[]) {
 
     for (i = 2; i < argc; i++) {
         if (!strcmp(argv[i], "-d")) {
-            strcpy(pdport, argv[++i]);  
+            strcpy(pdport, argv[++i]);
         } else if (!strcmp(argv[i], "-n")) {
             strcpy(asip, argv[++i]);
         } else if (!strcmp(argv[i], "-p")) {
@@ -127,51 +211,14 @@ int main(int argc, char* argv[]) {
     udpOpenConnection();
     udpConnect();
 
+    signal(SIGINT, endPD);
+    signal(SIGALRM, snooze);
+
+
     FD_ZERO(&rset); 
-    maxfdp1 = MAX(STDIN, fd_udp_client) + 1;
+    maxfdp1 = MAX(STDIN, fd_udp) + 1;
 
-    while(1) {
-        FD_SET(STDIN, &rset);
-        FD_SET(fd_udp_client, &rset);
-        FD_SET(fd_udp, &rset);
-
-        select(maxfdp1, &rset, NULL, NULL, NULL);
-
-        if (FD_ISSET(fd_udp_client, &rset)) {
-            n = recvfrom(fd_udp_client, reply, 9, 0, (struct sockaddr*) &addr_udp, &addrlen_udp);
-            if (n == -1) errorExit("recvfrom()");
-            reply[n] = '\0';
-
-            printf("server reply: %s", reply); /* debug */ // TODO remove this
-
-            if (!strcmp(reply, "RRG OK\n"))
-                printf("Registration successful\n");
-            else if (!strcmp(reply, "RRG NOK\n"))
-                printf("Registration was a failureeee you a failureeee\n"); // TODO change this
-            else
-                printf("nope, not working\n");  /* debug */ // TODO remove this
-        }
-
-        if (FD_ISSET(fd_udp, &rset)) {
-            n = recvfrom(fd_udp, buffer, 32, 0, (struct sockaddr*) &addr_udp, &addrlen_udp);
-            if (n == -1) errorExit("recvfrom()");
-            buffer[n] = '\0';
-            printf("received message from as\n");
-
-            n = sendto(fd_udp, validateRequest(buffer), n, 0, (struct sockaddr*) &addr_udp, addrlen_udp);
-            if (n == -1) errorExit("sendto()");
-        }
-        
-        if (FD_ISSET(STDIN, &rset)) {
-            scanf("%s", command);
-            if (!strcmp(command, "reg")) {
-                scanf("%s %s", uid, pass);
-                registration(uid, pass);
-            } else if (!strcmp(command, "exit")) {
-                unregistration();
-            } else printf("ERR1\n");    /* debug */ // TODO remove this
-        }
-    }
+    fdManager();
 
     return 0;
 }
