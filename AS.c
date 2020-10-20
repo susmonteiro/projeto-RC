@@ -72,11 +72,13 @@ char* login(char* uid, char* pass) {
 }
 
 char* request(char* uid, char* rid, char* fop, char* fname) {
-    char message[32], reply[32];
+    char message[64], reply[32];
     int n;
-    char *vc = "1234";  // TODO
+    char vc[5];
+    
+    sprintf(vc, "%d", rand() % 10000);  // TODO
 
-    printf("unimplemented\n");
+    if (fname)
     sprintf(message, "VLC %s %s %s %s\n", uid, vc, fop, fname);
 
     n = sendto(fd_udp_client, message, strlen(message)*sizeof(char), 0, res_udp_client->ai_addr, res_udp_client->ai_addrlen);
@@ -86,6 +88,10 @@ char* request(char* uid, char* rid, char* fop, char* fname) {
     reply[n] = '\0';
 
     if (!strcmp(reply, "RVC OK\n")) {
+        if (fname[0] == '\0')
+            printf("User: upload req, UID=%s, RID=%s VC=%s\n", uid, rid, vc);
+        else
+            printf("User: upload req, UID=%s file:%s, RID=%s VC=%s\n", uid, fname, rid, vc);
         return "RRQ OK\n";
     } else if (!strcmp(reply, "RVC NOK\n")) {
         return "RRQ NOK\n";
