@@ -170,9 +170,9 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    tcpOpenConnection();
     udpOpenConnection(asport, &fd_udp, &res_udp);
     addrlen_udp = sizeof(addr_udp);
-    tcpOpenConnection();
 
     printf("i connected yey\n");
 

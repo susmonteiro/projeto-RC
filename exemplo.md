@@ -9,7 +9,7 @@
 | AS->User             |                                                    | RLO OK\n                              | You are now logged in                                                |
 | User->AS             | req U f1.txt                                       | REQ 12345 7654 U f1.txt\n             | User: upload req, UID=12345 <br> file: f1.txt, RID=7654 <br> VC=9987 |
 | AS->PD               |                                                    | VLC 12345 9987 U f1.txt\n             | VC=9987, upload: f1.txt                                              |
-| PD->AS               |                                                    | RVC OK\n                              |                                                                      |
+| PD->AS               |                                                    | RVC UID OK\n                              |                                                                      |
 | AS->User             |                                                    | RRQ OK\n                              |                                                                      |
 | User->AS             | val 9987                                           | AUT 12345 7654 9987\n                 | User: UID=12345 <br> U, f1.txt, TID=2020                             |
 | AS->User             |                                                    | RAU 2020\n                            | Authenticated! (TID=2020)                                            |

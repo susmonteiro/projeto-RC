@@ -37,7 +37,7 @@ void tcpConnect() {
 
     memset(&hints, 0, sizeof hints);
     hints.ai_family=AF_INET; // IPv4
-    hints.ai_socktype=SOCK_STREAM; // UDP socket
+    hints.ai_socktype=SOCK_STREAM; // TCP socket
 
     n = getaddrinfo(asip, asport, &hints, &res);
     if (n != 0) errorExit("getaddrinfo()");
@@ -115,11 +115,13 @@ int main(int argc, char* argv[]) {
     strcpy(fsip, FSIP);
     strcpy(fsport, FSPORT);
 
-    for (i = 2; i < argc; i++) {
+    for (i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "-n")) {
             strcpy(asip, argv[++i]);
+            printf("%s\n", asip);
         } else if (!strcmp(argv[i], "-p")) {
             strcpy(asport, argv[++i]);
+            printf("%s\n", asport);
         } else if (!strcmp(argv[i], "-m")) {
             strcpy(fsip, argv[++i]);  
         } else if (!strcmp(argv[i], "-q")) {
@@ -129,12 +131,12 @@ int main(int argc, char* argv[]) {
 
     tcpConnect();
 
-    FD_ZERO(&rset); 
-    maxfdp1 = MAX(STDIN, fd) + 1;
-
     while(1) {
         FD_SET(STDIN, &rset);
         FD_SET(fd, &rset);
+
+        FD_ZERO(&rset); 
+        maxfdp1 = MAX(STDIN, fd) + 1;
 
         select(maxfdp1, &rset, NULL, NULL, NULL);
 

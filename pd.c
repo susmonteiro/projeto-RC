@@ -28,6 +28,8 @@ The PD application can also receive a command to exit, unregistering the user.
 
 #define MAX(a, b) a*(a>b) + b*(b>=a)
 
+void fdManager();
+
 int fd_udp_client, fd_udp;
 fd_set rset;
 struct addrinfo hints_udp_client, *res_udp_client, hints_udp, *res_udp;
@@ -113,13 +115,20 @@ char * validateRequest(char* message) {
     }
 }
 
+void snooze(){
+    printf("alarm out\n");  /* debug */
+    fdManager();
+}
 
 
 void fdManager() {
     int n; 
     while(1) {
+        FD_ZERO(&rset); 
         FD_SET(STDIN, &rset);
         FD_SET(fd_udp, &rset);
+
+        maxfdp1 = MAX(STDIN, fd_udp) + 1;
 
         n = select(maxfdp1, &rset, NULL, NULL, NULL);
         if (n == -1) errorExit("select()");
@@ -135,6 +144,7 @@ void fdManager() {
         }
         
         if (FD_ISSET(STDIN, &rset)) {
+            signal(SIGALRM, snooze);
             alarm(2);
             scanf("%s", command);
             if (!strcmp(command, "reg")) {
@@ -148,10 +158,7 @@ void fdManager() {
     }
 }
 
-void snooze(){
-    printf("alarm out\n");  /* debug */
-    fdManager();
-}
+
 
 int main(int argc, char* argv[]) {
     int i;
@@ -181,11 +188,8 @@ int main(int argc, char* argv[]) {
     udpConnect(asip, asport, &fd_udp_client, &res_udp_client);
 
     signal(SIGINT, endPD);
-    signal(SIGALRM, snooze);
 
 
-    FD_ZERO(&rset); 
-    maxfdp1 = MAX(STDIN, fd_udp) + 1;
 
     fdManager();
 
