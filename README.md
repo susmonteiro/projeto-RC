@@ -283,6 +283,7 @@ Request and reply messages:
 ---
 ## Questions:
 - terminar ordeiramente: só nos clientes, quando recebem uma resposta estranha do servidor e no servidor enviar apenas um "ERR" de volta ou terminar também no caso de ser um servidor?
+- quando terminamos o PD com ctrl+c, é suposto o PD fazer unregister com o AS certo? Ou seja, é chamar a funcao unregistration()?
 
 
 
