@@ -115,11 +115,6 @@ char * validateRequest(char* message) {
     }
 }
 
-void snooze(){
-    printf("alarm out\n");  /* debug */
-    fdManager();
-}
-
 
 void fdManager() {
     int n; 
@@ -144,8 +139,6 @@ void fdManager() {
         }
         
         if (FD_ISSET(STDIN, &rset)) {
-            signal(SIGALRM, snooze);
-            alarm(2);
             scanf("%s", command);
             if (!strcmp(command, "reg")) {
                 scanf("%s %s", uid, pass);
@@ -153,7 +146,6 @@ void fdManager() {
             } else if (!strcmp(command, "exit")) {
                 unregistration();
             } else printf("wrong command\n");
-            alarm(0);
         }
     }
 }
@@ -188,8 +180,6 @@ int main(int argc, char* argv[]) {
     udpConnect(asip, asport, &fd_udp_client, &res_udp_client);
 
     signal(SIGINT, endPD);
-
-
 
     fdManager();
 
