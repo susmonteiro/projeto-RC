@@ -9,6 +9,11 @@ void errorExit(char* errorMessage) {
     exit(1);
 }
 
+void errorDIYexit(char* errorMessage) {
+    printf("ERR: %s\nExiting...\n", errorMessage);
+    exit(1);
+}
+
 void printError(char* errorMessage) {
     printf("ERR: %s: %s\nNot exiting...\n", errorMessage, strerror(errno));
 }
