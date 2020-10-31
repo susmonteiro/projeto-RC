@@ -41,18 +41,26 @@ char command[6], uid[7], pass[10], buffer[32];
 int maxfdp1;
 
 void unregistration() {
+    int n, len;
+    char message[64];
+
+    len = sprintf(message, "UNR %s %s\n", uid, pass);
+    if (len < 0) errorExit("sprintf()");
+
+    n = sendto(fd_udp_client, message, len*sizeof(char), 0, res_udp_client->ai_addr, res_udp_client->ai_addrlen);
+    if (n == -1) errorExit("sendto()");
+}
+
+void endPD() {
+    //unregistration();
     freeaddrinfo(res_udp_client);
     close(fd_udp_client);
     exit(0);
 }
 
-void endPD() {
-    unregistration();
-}
-
 void registration(char* uid, char* pass) {
     int n, len;
-    char message[64], reply[9];
+    char message[64];
 
     if (strlen(uid) != 5 || strlen(pass) != 8) {
         printf("ERR2\n");   /* debug */ // TODO change this
@@ -65,19 +73,6 @@ void registration(char* uid, char* pass) {
     printf("our message: %s", message);
     n = sendto(fd_udp_client, message, len*sizeof(char), 0, res_udp_client->ai_addr, res_udp_client->ai_addrlen);
     if (n == -1) errorExit("sendto()");
-
-    n = recvfrom(fd_udp_client, reply, 9, 0, (struct sockaddr*) &addr_udp, &addrlen_udp);
-    if (n == -1) errorExit("recvfrom()");
-    reply[n] = '\0';
-
-    printf("server reply: %s\n", reply); /* debug */ // TODO remove this
-
-    if (!strcmp(reply, "RRG OK\n"))
-        printf("Registration successful\n");
-    else if (!strcmp(reply, "RRG NOK\n"))
-        printf("Registration was a failureeee you a failureeee\n"); // TODO change this
-    else
-        endPD();
 }
 
 char * validateRequest(char* message) {
@@ -118,15 +113,29 @@ char * validateRequest(char* message) {
 
 void fdManager() {
     int n; 
+    char reply[9];
+
     while(1) {
         FD_ZERO(&rset); 
         FD_SET(STDIN, &rset);
         FD_SET(fd_udp, &rset);
+        FD_SET(fd_udp_client, &rset);
 
-        maxfdp1 = MAX(STDIN, fd_udp) + 1;
+        maxfdp1 = MAX(STDIN, fd_udp);
+        maxfdp1 = MAX(maxfdp1, fd_udp_client) + 1;
 
         n = select(maxfdp1, &rset, NULL, NULL, NULL);
         if (n == -1) errorExit("select()");
+
+        if (FD_ISSET(STDIN, &rset)) {
+            scanf("%s", command);
+            if (!strcmp(command, "reg")) {
+                scanf("%s %s", uid, pass);
+                registration(uid, pass);
+            } else if (!strcmp(command, "exit")) {
+                unregistration();
+            } else printf("wrong command\n");
+        }
 
         if (FD_ISSET(fd_udp, &rset)) {              // server of AS
             n = recvfrom(fd_udp, buffer, 32, 0, (struct sockaddr*) &addr_udp, &addrlen_udp);
@@ -137,16 +146,27 @@ void fdManager() {
             n = sendto(fd_udp, validateRequest(buffer), n, 0, (struct sockaddr*) &addr_udp, addrlen_udp);
             if (n == -1) errorExit("sendto()");
         }
-        
-        if (FD_ISSET(STDIN, &rset)) {
-            scanf("%s", command);
-            if (!strcmp(command, "reg")) {
-                scanf("%s %s", uid, pass);
-                registration(uid, pass);
-            } else if (!strcmp(command, "exit")) {
-                unregistration();
-            } else printf("wrong command\n");
-        }
+
+        if (FD_ISSET(fd_udp_client, &rset)) {
+            n = recvfrom(fd_udp_client, reply, 9, 0, (struct sockaddr*) &addr_udp, &addrlen_udp);
+            if (n == -1) errorExit("recvfrom()");
+            reply[n] = '\0';
+
+            printf("server reply: %s", reply);  /* debug */ // TODO remove this
+
+            if (!strcmp(reply, "RRG OK\n"))
+                printf("Registration successful\n");
+            else if (!strcmp(reply, "RRG NOK\n"))
+                printf("Registration was a failureeee you a failureeee\n"); // TODO change this
+            else if (!strcmp(reply, "RUN OK\n")) {
+                printf("Me says bye-bye\n");
+                endPD();
+            }
+            else if (!strcmp(reply, "RUN NOK\n"))
+                printf("AS doesnt let me say bye-bye\n");
+            else
+                printf("nope, not working\n");  /* debug */ // TODO remove this
+        } 
     }
 }
 
