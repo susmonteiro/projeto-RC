@@ -177,7 +177,7 @@ int main(int argc, char* argv[]) {
     
     if (argc < MINARGS || argc > MAXARGS) {
         printf("​Usage: %s PDIP [-d PDport] [-n ASIP] [-p ASport]\n", argv[0]);
-        errorExit("incorrect number of arguments");
+        errorDIYexit("incorrect number of arguments");
     }
 
     strcpy(pdip, argv[1]);
