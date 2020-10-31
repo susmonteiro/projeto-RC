@@ -50,16 +50,16 @@ void tcpConnect() {
 void login(char* uid, char* pass) {
     int n;
     char message[64];
-
     sprintf(message, "LOG %s %s\n", uid, pass);
     printf("our message: %s", message);
-    n = write(fd, message, strlen(message)*sizeof(char));
+    n = write(fd, message, strlen(message));
     if (n == -1) errorExit("write()");
 }
 
-void requestFile(char *uid, char* rid, char op, char *file) {
+void requestFile(char *uid, char* rid) {
     int n;
-    char message[64];
+    char message[64], file[32];
+    char op;
 
     scanf("%c", &op);
     switch(op) {
@@ -76,15 +76,17 @@ void requestFile(char *uid, char* rid, char op, char *file) {
             break;
         case 'U':
             scanf("%s", file);
+            printf("%c %s\n", op, file);
+            printf("%s %s %c %s\n", uid, rid, op, file);
             sprintf(message, "REQ %s %s %c %s\n", uid, rid, op, file);
             break;
         case 'X':
             sprintf(message, "REQ %s %s %c\n", uid, rid, op);
-
-        printf("our message: %s", message);
-        n = write(fd, message, strlen(message)*sizeof(char));
-        if (n == -1) errorExit("write()");
+            break;
     }
+    printf("our message: %s\n", message);
+    n = write(fd, message, strlen(message));
+    if (n == -1) errorExit("write()");
 }
 
 void validateCode(char* uid, char*rid, char* vc) {
@@ -93,17 +95,17 @@ void validateCode(char* uid, char*rid, char* vc) {
 
     sprintf(message, "AUT %s %s %s\n \n", uid, rid, vc);
     printf("our message: %s", message);
-    n = write(fd, message, strlen(message)*sizeof(char));
+    n = write(fd, message, strlen(message));
     if (n == -1) errorExit("write()");
 }
 
 int main(int argc, char* argv[]) {
-    char command[6], uid[7], pass[10], reply[9], vc[4], rid[5], tid[5], acr[4], file[32];
+    char command[6], uid[7], pass[10], reply[9], vc[4], rid[5], tid[5], acr[4];
     char op;
 
     int n, i, maxfdp1;
 
-    srand((unsigned) time(&t));
+    //srand((unsigned) time(&t));
     
     if (argc < MINARGS || argc > MAXARGS) {
         printf("​Usage: %s -n ASIP] [-p ASport] [-m FSIP] [-q FSport]\n", argv[0]);
@@ -114,6 +116,9 @@ int main(int argc, char* argv[]) {
     strcpy(asport, ASPORT);
     strcpy(fsip, FSIP);
     strcpy(fsport, FSPORT);
+
+    printf("%s\n", asip);
+    printf("%s\n", asport);
 
     for (i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "-n")) {
@@ -129,23 +134,36 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    tcpConnect();
+    tcpConnect(); 
+
+    strcpy(rid, "1234");
 
     while(1) {
-        FD_SET(STDIN, &rset);
-        FD_SET(fd, &rset);
-
+        //printf("Inside select\n");
         FD_ZERO(&rset); 
-        maxfdp1 = MAX(STDIN, fd) + 1;
+        //printf("Inside select 1\n");
+        FD_SET(STDIN, &rset);
+        //printf("Inside select 2\n");
+        FD_SET(fd, &rset);
+        //printf("Inside select 3\n");
 
-        select(maxfdp1, &rset, NULL, NULL, NULL);
+
+        maxfdp1 = MAX(STDIN, fd) + 1;
+        //printf("Inside select 4\n");
+
+        n = select(maxfdp1, &rset, NULL, NULL, NULL);
+        if (n == -1) errorExit("select()");
+
+        //printf("Inside select 5\n");
+
 
         if (FD_ISSET(fd, &rset)) {
+            //printf("hey\n");
             n = read(fd, reply, 9);
             if (n == -1) errorExit("read()");
             reply[n] = '\0';
 
-            printf("server reply: %s", reply); /* debug */ // TODO remove this
+            //printf("server reply: %s", reply); /* debug */ // TODO remove this
 
             sscanf(reply, "%s %s", acr, tid);
 
@@ -159,27 +177,28 @@ int main(int argc, char* argv[]) {
                 printf("Request was a failureeee you a failureeee\n"); // TODO change this
             else if (!strcmp(acr, "AUT"))
                 printf("Authenticated! (TID=%s)", tid);  /* debug */ // TODO remove this
-            else
-                printf("nope, not working\n");
+            //else
+                //printf("nope, not working\n");
             
         }
-
-        strcpy(rid, "1234");
         
         if (FD_ISSET(STDIN, &rset)) {
                 scanf("%s", command);
+                printf("%s\n", command);
                 if (!strcmp(command, "login")) {
                     scanf("%s %s", uid, pass);
+                    printf("%s %s\n", uid, pass);
                     login(uid, pass);
+                    printf("after login duh\n");
                 } else if (!strcmp(command, "req")) {
-                    scanf("%c %s", &op, file);
-                    requestFile(uid, rid, op, file);
+                    scanf("%c", &op);
+                    requestFile(uid, rid);
                 }
                 else if (!strcmp(command, "val")) {
                     scanf("%s %s %s", uid, rid, vc);
                     validateCode(uid, rid, vc);
                 }
-                else printf("ERR1\n");    /* debug */ // TODO remove this
+                else printf("ERR\n");    /* debug */ // TODO remove this
         }
     }
 
