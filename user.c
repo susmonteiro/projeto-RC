@@ -14,7 +14,7 @@
 #include "connection.c"
 #include "error.c"
 
-#define MAXARGS 9
+#define MAXARGS 10
 #define MINARGS 1
 
 #define MAX(a, b) a*(a>b) + b*(b>=a)
@@ -117,11 +117,14 @@ int main(int argc, char* argv[]) {
     strcpy(fsip, FSIP);
     strcpy(fsport, FSPORT);
 
-    printf("%s\n", asip);
-    printf("%s\n", asport);
+    // printf("%s\n", asip);
+    // printf("%s\n", asport);
 
     for (i = 1; i < argc; i++) {
-        if (!strcmp(argv[i], "-n")) {
+	if (!strcmp(argv[i], "-h")) {
+            printf("​Usage: %s -n ASIP] [-p ASport] [-m FSIP] [-q FSport]\n", argv[0]);
+            exit(0);
+	} else if (!strcmp(argv[i], "-n")) {
             strcpy(asip, argv[++i]);
             printf("%s\n", asip);
         } else if (!strcmp(argv[i], "-p")) {
@@ -131,7 +134,9 @@ int main(int argc, char* argv[]) {
             strcpy(fsip, argv[++i]);  
         } else if (!strcmp(argv[i], "-q")) {
             strcpy(fsport, argv[++i]);
-        }
+        } else {
+	    printf("wrong thing\n");
+	}
     }
 
     tcpConnect(); 
