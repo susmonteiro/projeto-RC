@@ -28,6 +28,8 @@ socklen_t addrlen;
 struct sockaddr_in addr;
 
 char fsip[32], fsport[8], asip[32], asport[8];
+char uid[7], pass[10], vc[4], rid[5], file[32];
+char op;
 
 void tcpConnect() {
     int n;
@@ -47,7 +49,7 @@ void tcpConnect() {
 
 }
 
-void login(char* uid, char* pass) {
+void login() {
     int n;
     char message[64];
     sprintf(message, "LOG %s %s\n", uid, pass);
@@ -56,10 +58,9 @@ void login(char* uid, char* pass) {
     if (n == -1) errorExit("write()");
 }
 
-void requestFile(char *uid, char* rid) {
+void requestFile() {
     int n;
-    char message[64], file[32];
-    char op;
+    char message[64];
 
     scanf("%c", &op);
     switch(op) {
@@ -89,19 +90,18 @@ void requestFile(char *uid, char* rid) {
     if (n == -1) errorExit("write()");
 }
 
-void validateCode(char* uid, char*rid, char* vc) {
+void validateCode() {
     int n;
     char message[64];
 
-    sprintf(message, "AUT %s %s %s\n \n", uid, rid, vc);
-    printf("our message: %s", message);
+    sprintf(message, "AUT %s %s %s\n", uid, rid, vc);
+    printf("%s\n", message);
     n = write(fd, message, strlen(message));
     if (n == -1) errorExit("write()");
 }
 
 int main(int argc, char* argv[]) {
-    char command[6], uid[7], pass[10], reply[9], vc[4], rid[5], tid[5], acr[4];
-    char op;
+    char command[6], reply[10], acr[4], tid[5];
 
     int n, i, maxfdp1;
 
@@ -159,13 +159,17 @@ int main(int argc, char* argv[]) {
 
         if (FD_ISSET(fd, &rset)) {
             //printf("hey\n");
-            n = read(fd, reply, 9);
+            n = read(fd, reply, 10);
+            printf("%d\n", n);
             if (n == -1) errorExit("read()");
             reply[n] = '\0';
 
-            //printf("server reply: %s", reply); /* debug */ // TODO remove this
+            printf("server reply: %s", reply); /* debug */ // TODO remove this
 
             sscanf(reply, "%s %s", acr, tid);
+            //printf("%s %s\n", acr, tid);
+            //acr[3] = '\0';
+            tid[4] = '\0';
 
             if (!strcmp(reply, "RLO OK\n"))
                 printf("You are now logged in.\n");
@@ -175,10 +179,11 @@ int main(int argc, char* argv[]) {
                 printf("Request successful\n"); // TODO change this
             else if (!strcmp(reply, "RRQ NOK\n"))
                 printf("Request was a failureeee you a failureeee\n"); // TODO change this
-            else if (!strcmp(acr, "AUT"))
-                printf("Authenticated! (TID=%s)", tid);  /* debug */ // TODO remove this
-            //else
-                //printf("nope, not working\n");
+            else if (!strcmp(acr, "RAU")) {
+                printf("Authenticated! (TID=%s)\n", tid);
+            }
+            else
+                printf("nope, not working\n");
             
         }
         
@@ -188,15 +193,15 @@ int main(int argc, char* argv[]) {
                 if (!strcmp(command, "login")) {
                     scanf("%s %s", uid, pass);
                     printf("%s %s\n", uid, pass);
-                    login(uid, pass);
+                    login();
                     printf("after login duh\n");
                 } else if (!strcmp(command, "req")) {
                     scanf("%c", &op);
-                    requestFile(uid, rid);
+                    requestFile();
                 }
                 else if (!strcmp(command, "val")) {
-                    scanf("%s %s %s", uid, rid, vc);
-                    validateCode(uid, rid, vc);
+                    scanf("%s", vc);
+                    validateCode();
                 }
                 else printf("ERR\n");    /* debug */ // TODO remove this
         }

@@ -65,10 +65,10 @@ char* request(char* uid, char* rid, char* fop, char* fname) {
     else sprintf(message, "VLC %s %d %s\n", uid, vc, fop);
 
     n = sendto(fd_udp_client, message, strlen(message), 0, res_udp_client->ai_addr, res_udp_client->ai_addrlen);
-    if (n == -1) errorExit("request: sendto()");
+    if (n == -1) printError("request: sendto()");
     printf("%d\n", n);
     n = recvfrom(fd_udp_client, reply, 32, 0, (struct sockaddr*) &addr_udp_client, &addrlen_udp_client);
-    if (n == -1) errorExit("request: recvfrom()");
+    if (n == -1) printError("request: recvfrom()");
     reply[n] = '\0';
 
     if (!strcmp(reply, "RVC OK\n")) {
@@ -88,13 +88,19 @@ char* request(char* uid, char* rid, char* fop, char* fname) {
 }
 
 char* secondAuthentication(char* uid, char* rid, char* vc) {
+    int tid;
     char message[64];
-    printv("unimplemented");
+    char *res;
+    tid = rand() % 9999;
+
+    printv("unimplemented\n");
     sprintf(message, "User: UID=%s", uid);
     printv(message);
-    sprintf(message, "U, f1.txt, TID=2020\n");  //possivelmente vamos ter que criar um vetor de estruturas que guardam file requests para guardar os opcodes e assim (com id rid por ex.)
+    sprintf(message, "U, f1.txt, TID=%d", tid);  //possivelmente vamos ter que criar um vetor de estruturas que guardam file requests para guardar os opcodes e assim (com id rid por ex.)
     printv(message);
-    return "RAU TID";   // TODO tid
+    res = (char*)malloc(64*sizeof(char));
+    sprintf(res, "RAU %d\n", tid);
+    return res;   // TODO tid
 }
 
 void userSession(int fd) {
@@ -102,7 +108,7 @@ void userSession(int fd) {
     char buffer[128], command[5], arg1[32], arg2[32], arg3[32], arg4[32];
 
     n = read(fd, buffer, 128);
-    if (n == -1) errorExit("userSession: read()");
+    if (n == -1) printError("userSession: read()");
     buffer[n] = '\0';
 
     printf("%s", buffer);
@@ -124,9 +130,10 @@ void userSession(int fd) {
         strcpy(buffer, request(arg1, arg2, arg3, arg4));
     } else if (!strcmp(command, "AUT")) {
         strcpy(buffer, secondAuthentication(arg1, arg2, arg3));
+        printf("%s\n", buffer);
     }
     n = write(fd, buffer, strlen(buffer));
-    if (n == -1) errorExit("userSession: write()"); 
+    if (n == -1) printError("userSession: write()"); 
 }
 
 void tcpOpenConnection() {
@@ -134,7 +141,7 @@ void tcpOpenConnection() {
     ssize_t n;
 
     fd_tcp = socket(AF_INET,SOCK_STREAM,0);
-    if(fd_tcp == -1) errorExit("TCP: socket()");
+    if(fd_tcp == -1) printError("TCP: socket()");
 
     memset(&hints_tcp, 0, sizeof hints_tcp);
     hints_tcp.ai_family = AF_INET;
@@ -142,16 +149,15 @@ void tcpOpenConnection() {
     hints_tcp.ai_flags = AI_PASSIVE;
 
     errcode = getaddrinfo(NULL, ASPORT, &hints_tcp, &res_tcp);
-    if(errcode != 0) errorExit("TCP: getaddrinfo()");
+    if(errcode != 0) printError("TCP: getaddrinfo()");
 
     n = bind(fd_tcp, res_tcp->ai_addr, res_tcp->ai_addrlen);
-    if(n == -1) errorExit("TCP: bind()");
+    if(n == -1) printError("TCP: bind()");
     
-    if(listen(fd_tcp, 5) == -1) errorExit("TCP: listen()");
+    if(listen(fd_tcp, 5) == -1) printError("TCP: listen()");
     fd_array = (int*)malloc(sizeof(int*));
 
-    /* freeaddrinfo(res_tcp); // TODO move this
-    close(fd_tcp); */
+   
 }
 
 
@@ -207,7 +213,7 @@ int main(int argc, char* argv[]) {
     
     if (argc < MINARGS || argc > MAXARGS) {
         printf("​Usage: %s -p [ASport] [-v]\n", argv[0]);
-        errorExit("incorrect number of arguments");
+        printError("incorrect number of arguments");
     }
 
     strcpy(asport, ASPORT);
@@ -246,15 +252,15 @@ int main(int argc, char* argv[]) {
 
         if (FD_ISSET(fd_udp, &rset)) {
             n = recvfrom(fd_udp, buffer, 128, 0, (struct sockaddr*) &addr_udp, &addrlen_udp);
-            if (n == -1) errorExit("main: recvfrom()");
+            if (n == -1) printError("main: recvfrom()");
             buffer[n] = '\0';
             printv("received message from pd");
 
             n = sendto(fd_udp, applyCommand(buffer), 32, 0, (struct sockaddr*) &addr_udp, addrlen_udp);
-            if (n == -1) errorExit("main: sendto()");
+            if (n == -1) printError("main: sendto()");
         } if (FD_ISSET(fd_tcp, &rset)) {
             printv("entrei");
-            if((fd_array[numClients++] = accept(fd_tcp, (struct sockaddr *) &addr_tcp, &addrlen_tcp)) == -1) errorExit("main: accept()");
+            if((fd_array[numClients++] = accept(fd_tcp, (struct sockaddr *) &addr_tcp, &addrlen_tcp)) == -1) printError("main: accept()");
 
             fd_array = (int*)realloc(fd_array, numClients + 1);
             //userSession(fd_array[numClients - 1]);
