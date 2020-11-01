@@ -15,7 +15,7 @@
 #include "connection.h"
 #include "error.h"
 
-#define MAXARGS 9
+#define MAXARGS 10
 #define MINARGS 1
 
 #define MAX(a, b) a*(a>b) + b*(b>=a)
