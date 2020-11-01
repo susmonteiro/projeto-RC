@@ -8,6 +8,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <signal.h>
 #include <sys/select.h>
 #include "config.h"
 #include "connection.h"
@@ -43,18 +44,14 @@ char* login(char* uid, char* pass) {
     return "RLO OK\n";
 }
 
- int random_int(int min, int max) {
-    return min + rand() % (max+1 - min);
-}
-
 char* request(char* uid, char* rid, char* fop, char* fname) {
-    char message[64], reply[32];
+    char message[64];
     int n, vc;
-
+    
     printf("%c", fname[0]);
 
     printf("booh\n");
-    
+
     vc = rand() % 9999;
     
     if (fname[0] != '\0') {
@@ -67,20 +64,17 @@ char* request(char* uid, char* rid, char* fop, char* fname) {
     n = sendto(fd_udp_client, message, strlen(message), 0, res_udp_client->ai_addr, res_udp_client->ai_addrlen);
     if (n == -1) printError("request: sendto()");
     printf("%d\n", n);
-    n = recvfrom(fd_udp_client, reply, 32, 0, (struct sockaddr*) &addr_udp_client, &addrlen_udp_client);
-    if (n == -1) printError("request: recvfrom()");
-    reply[n] = '\0';
 
-    if (!strcmp(reply, "RVC OK\n")) {
-        if (fname[0] == '\0') {
-            sprintf(message, "User: upload req, UID=%s, RID=%s VC=%d", uid, rid, vc);
-            printv(message);
-        } else {
-            sprintf(message, "User: upload req, UID=%s file:%s, RID=%s VC=%d\n", uid, fname, rid, vc);
-            printv(message);
-        }
+    if (fname[0] == '\0') {
+        sprintf(message, "User: %s req, UID=%s, RID=%s VC=%d", fop, uid, rid, vc);
+        printv(message);
+    } else {
+        sprintf(message, "User: %s req, UID=%s file:%s, RID=%s VC=%d", fop, uid, fname, rid, vc);
+        printv(message);
+    }
+    if (1) {
         return "RRQ OK\n";
-    } else if (!strcmp(reply, "RVC NOK\n")) {
+    } else if (0) { // TODO ex: se o uid não tiver a sessão ligada por ex.
         return "RRQ NOK\n";
     } else {
         return "ERR\n";
@@ -102,6 +96,28 @@ char* secondAuthentication(char* uid, char* rid, char* vc) {
     sprintf(res, "RAU %d\n", tid);
     return res;   // TODO tid
 }
+
+/*char* pdSession(char* reply) {
+    char message[64], uid[7], state[5], fname_temp[32];
+    sscanf(reply, "RVC %s %s", uid, state);
+    if (strcmp(state, "NOK\n") state[3] = '\0';
+    else  state[2] = '\0';
+    if (!strcmp(state, "OK\n")) {
+        fname_temp[0] = '\0';
+        if (fname_temp[0] == '\0') {
+            sprintf(message, "User: upload req, UID=%s, RID=1234 VC=6808", uid); // criar ficheiro ou estrutura para usar o uid para ir buscar o rid, o vc e op
+            printv(message);
+        } else {
+            sprintf(message, "User: upload req, UID=%s file:f1.txt, RID=1234 VC=6808\n", uid); // same here
+            printv(message);
+        }
+        return "RRQ OK\n";
+    }
+    else if (!strcmp(state, "NOK\n")) {
+        return "RRQ NOK\n";
+    }
+    else return "ERR\n";
+}*/
 
 void userSession(int fd) {
     int n;
@@ -185,7 +201,7 @@ void endAS() {
 }
 
 int main(int argc, char* argv[]) {
-    char buffer[128];
+    char buffer[128], reply[128];
     int i, n, maxfdp1;
     
     if (argc < MINARGS || argc > MAXARGS) {
@@ -225,7 +241,7 @@ int main(int argc, char* argv[]) {
         maxfdp1 = MAX(fd_tcp, fd_udp) + 1;
         
         for (i=0; i<numClients; i++) {
-                maxfdp1 = MAX(maxfdp1, fd_array[i]) + 1;
+            maxfdp1 = MAX(maxfdp1, fd_array[i]) + 1;
         } 
 
         select(maxfdp1, &rset, NULL, NULL, NULL);
@@ -238,14 +254,20 @@ int main(int argc, char* argv[]) {
 
             n = sendto(fd_udp, applyCommand(buffer), 32, 0, (struct sockaddr*) &addr_udp, addrlen_udp);
             if (n == -1) printError("main: sendto()");
-        } if (FD_ISSET(fd_tcp, &rset)) {
+        } 
+        if (FD_ISSET(fd_udp_client, &rset)) {
+            n = recvfrom(fd_udp_client, reply, 32, 0, (struct sockaddr*) &addr_udp_client, &addrlen_udp_client);
+            if (n == -1) printError("request: recvfrom()");
+            reply[n] = '\0';
+        }
+        if (FD_ISSET(fd_tcp, &rset)) {
             printv("entrei");
             if((fd_array[numClients++] = accept(fd_tcp, (struct sockaddr *) &addr_tcp, &addrlen_tcp)) == -1) printError("main: accept()");
 
             fd_array = (int*)realloc(fd_array, numClients + 1);
             //userSession(fd_array[numClients - 1]);
         }
-
+    
         for (i=0; i<numClients; i++) {
             if (FD_ISSET(fd_array[i], &rset)) {
                 userSession(fd_array[i]);
@@ -257,3 +279,5 @@ int main(int argc, char* argv[]) {
 
     return 0;
 }
+
+

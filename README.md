@@ -278,31 +278,15 @@ Request and reply messages:
 - SIGALARM para quando a resposta demora demasiado tempo a chegar)
 - SIGINT para quando se carrega no ctrl+c o programa terminar ordeiramente
 - fix sendto sending too many chars
+- close connections on exit
 
 ---
 ---
 ## Questions:
 - terminar ordeiramente: só nos clientes, quando recebem uma resposta estranha do servidor e no servidor enviar apenas um "ERR" de volta ou terminar também no caso de ser um servidor?
 - quando terminamos o PD com ctrl+c, é suposto o PD fazer unregister com o AS certo? Ou seja, é chamar a funcao unregistration()?
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+- o que acontece se o PD fizer unregistration() e o as mandar um NOK?
+- registration no PD: é suposto termos um timer, depois de enviarmos a mensagem e se passado x segundos não obtivermos resposta do AS, voltar a mandar o pedido? Fazer um print no terminal a avisar o PD que não foi possível fazer o registo? 
+- o que é suposto acontecer quando o AS recebe um RVC UID OK e RVC UID NOK?
+- quando é enviamos um RRQ NOK? Quando o uid não corresponde a um PD registado? ou quando o AS não consegue enviar o VC ao PD?
+- em que situações é que é suposto

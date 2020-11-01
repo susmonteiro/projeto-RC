@@ -10,6 +10,7 @@
 #include <netdb.h>
 #include <sys/select.h>
 #include <time.h>
+#include <signal.h>
 #include "config.h"
 #include "connection.h"
 #include "error.h"
@@ -36,7 +37,7 @@ void login() {
     int n;
     char message[64];
     sprintf(message, "LOG %s %s\n", uid, pass);
-    printf("our message: %s", message);
+    //printf("our message: %s", message);   //DEBUG
     n = write(fd, message, strlen(message));
     if (n == -1) errorExit("write()");
 }
@@ -60,15 +61,15 @@ void requestFile() {
             break;
         case 'U':
             scanf("%s", file);
-            printf("%c %s\n", op, file);
-            printf("%s %s %c %s\n", uid, rid, op, file);
+            //printf("%c %s\n", op, file); //DEBUG
+            //printf("%s %s %c %s\n", uid, rid, op, file); //DEBUG
             sprintf(message, "REQ %s %s %c %s\n", uid, rid, op, file);
             break;
         case 'X':
             sprintf(message, "REQ %s %s %c\n", uid, rid, op);
             break;
     }
-    printf("our message: %s\n", message);
+    //printf("our message: %s\n", message); //DEBUG
     n = write(fd, message, strlen(message));
     if (n == -1) errorExit("write()");
 }
@@ -78,48 +79,21 @@ void validateCode() {
     char message[64];
 
     sprintf(message, "AUT %s %s %s\n", uid, rid, vc);
-    printf("%s\n", message);
+    //printf("%s\n", message); //DEBUG
     n = write(fd, message, strlen(message));
     if (n == -1) errorExit("write()");
 }
 
-int main(int argc, char* argv[]) {
+void endUser() {
+    freeaddrinfo(res);
+    close(fd);
+    exit(0);
+}
+
+void fdManager() {
     char command[6], reply[10], acr[4], tid[5];
 
-    int n, i, maxfdp1;
-
-    //srand((unsigned) time(&t));
-    
-    if (argc < MINARGS || argc > MAXARGS) {
-        printf("​Usage: %s -n ASIP] [-p ASport] [-m FSIP] [-q FSport]\n", argv[0]);
-        errorExit("incorrect number of arguments");
-    }
-
-    strcpy(asip, ASIP);
-    strcpy(asport, ASPORT);
-    strcpy(fsip, FSIP);
-    strcpy(fsport, FSPORT);
-
-    printf("%s\n", asip);
-    printf("%s\n", asport);
-
-    for (i = 1; i < argc; i++) {
-        if (!strcmp(argv[i], "-n")) {
-            strcpy(asip, argv[++i]);
-            printf("%s\n", asip);
-        } else if (!strcmp(argv[i], "-p")) {
-            strcpy(asport, argv[++i]);
-            printf("%s\n", asport);
-        } else if (!strcmp(argv[i], "-m")) {
-            strcpy(fsip, argv[++i]);  
-        } else if (!strcmp(argv[i], "-q")) {
-            strcpy(fsport, argv[++i]);
-        }
-    }
-
-    tcpConnect(); 
-
-    strcpy(rid, "1234");
+    int n, maxfdp1;
 
     while(1) {
         //printf("Inside select\n");
@@ -143,11 +117,11 @@ int main(int argc, char* argv[]) {
         if (FD_ISSET(fd, &rset)) {
             //printf("hey\n");
             n = read(fd, reply, 10);
-            printf("%d\n", n);
+            //printf("%d\n", n); //DEBUG
             if (n == -1) errorExit("read()");
             reply[n] = '\0';
 
-            printf("server reply: %s", reply); /* debug */ // TODO remove this
+            //printf("server reply: %s", reply); /* DEBUG */ // TODO remove this
 
             sscanf(reply, "%s %s", acr, tid);
             //printf("%s %s\n", acr, tid);
@@ -189,6 +163,44 @@ int main(int argc, char* argv[]) {
                 else printf("ERR\n");    /* debug */ // TODO remove this
         }
     }
+}
+
+int main(int argc, char* argv[]) {
+    int i;
+   
+    if (argc < MINARGS || argc > MAXARGS) {
+        printf("​Usage: %s -n ASIP] [-p ASport] [-m FSIP] [-q FSport]\n", argv[0]);
+        errorExit("incorrect number of arguments");
+    }
+
+    strcpy(asip, ASIP);
+    strcpy(asport, ASPORT);
+    strcpy(fsip, FSIP);
+    strcpy(fsport, FSPORT);
+
+    //printf("%s\n", asip); //DEBUG
+    //printf("%s\n", asport); //DEBUG
+
+    for (i = 1; i < argc; i++) {
+        if (!strcmp(argv[i], "-n")) {
+            strcpy(asip, argv[++i]);
+            //printf("%s\n", asip); //DEBUG
+        } else if (!strcmp(argv[i], "-p")) {
+            strcpy(asport, argv[++i]);
+            //printf("%s\n", asport); //DEBUG
+        } else if (!strcmp(argv[i], "-m")) {
+            strcpy(fsip, argv[++i]);  
+        } else if (!strcmp(argv[i], "-q")) {
+            strcpy(fsport, argv[++i]);
+        }
+    }
+
+    tcpConnect(asip, asport, &fd, &res);
+    sprintf(rid, "%d", rand() % 9999);
+
+    signal(SIGINT, endUser);
+
+    fdManager();
 
     return 0;
 }
