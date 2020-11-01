@@ -10,8 +10,8 @@
 #include <netdb.h>
 #include <sys/select.h>
 #include "config.h"
-#include "connection.c"
-#include "error.c"
+#include "connection.h"
+#include "error.h"
 
 #define MAXARGS 4
 #define MINARGS 1
@@ -136,29 +136,6 @@ void userSession(int fd) {
     if (n == -1) printError("userSession: write()"); 
 }
 
-void tcpOpenConnection() {
-    int errcode;
-    ssize_t n;
-
-    fd_tcp = socket(AF_INET,SOCK_STREAM,0);
-    if(fd_tcp == -1) printError("TCP: socket()");
-
-    memset(&hints_tcp, 0, sizeof hints_tcp);
-    hints_tcp.ai_family = AF_INET;
-    hints_tcp.ai_socktype = SOCK_STREAM;
-    hints_tcp.ai_flags = AI_PASSIVE;
-
-    errcode = getaddrinfo(NULL, ASPORT, &hints_tcp, &res_tcp);
-    if(errcode != 0) printError("TCP: getaddrinfo()");
-
-    n = bind(fd_tcp, res_tcp->ai_addr, res_tcp->ai_addrlen);
-    if(n == -1) printError("TCP: bind()");
-    
-    if(listen(fd_tcp, 5) == -1) printError("TCP: listen()");
-    fd_array = (int*)malloc(sizeof(int*));
-
-   
-}
 
 
 char* registration(char* uid, char* pass, char* pdip_new, char* pdport_new) {
@@ -226,7 +203,10 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    tcpOpenConnection();
+    tcpOpenConnection(asport, &fd_tcp, &res_tcp);
+    if (listen(fd_tcp, 5) == -1) printError("TCP: listen()");
+    fd_array = (int*)malloc(sizeof(int*));
+
     udpOpenConnection(asport, &fd_udp, &res_udp);
     addrlen_udp = sizeof(addr_udp);
 
@@ -272,9 +252,8 @@ int main(int argc, char* argv[]) {
             }
         }
     }
-
-    freeaddrinfo(res_udp);
-    close(fd_udp);
+    
+    //closeConnection(fd_udp, res_udp);
 
     return 0;
 }

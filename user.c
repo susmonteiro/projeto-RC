@@ -11,8 +11,8 @@
 #include <sys/select.h>
 #include <time.h>
 #include "config.h"
-#include "connection.c"
-#include "error.c"
+#include "connection.h"
+#include "error.h"
 
 #define MAXARGS 9
 #define MINARGS 1
@@ -31,23 +31,6 @@ char fsip[32], fsport[8], asip[32], asport[8];
 char uid[7], pass[10], vc[4], rid[5], file[32];
 char op;
 
-void tcpConnect() {
-    int n;
-
-    fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (fd == -1) errorExit("socket()");
-
-    memset(&hints, 0, sizeof hints);
-    hints.ai_family=AF_INET; // IPv4
-    hints.ai_socktype=SOCK_STREAM; // TCP socket
-
-    n = getaddrinfo(asip, asport, &hints, &res);
-    if (n != 0) errorExit("getaddrinfo()");
-
-    n = connect(fd, res->ai_addr, res->ai_addrlen);
-    if (n == -1) errorExit("connect()");
-
-}
 
 void login() {
     int n;
