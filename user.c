@@ -108,7 +108,7 @@ int main(int argc, char* argv[]) {
     //srand((unsigned) time(&t));
     
     if (argc < MINARGS || argc > MAXARGS) {
-        printf("​Usage: %s -n ASIP] [-p ASport] [-m FSIP] [-q FSport]\n", argv[0]);
+        printf("​Usage: %s -n [ASIP] [-p ASport] [-m FSIP] [-q FSport]\n", argv[0]);
         errorExit("incorrect number of arguments");
     }
 
@@ -122,7 +122,7 @@ int main(int argc, char* argv[]) {
 
     for (i = 1; i < argc; i++) {
 	if (!strcmp(argv[i], "-h")) {
-            printf("​Usage: %s -n ASIP] [-p ASport] [-m FSIP] [-q FSport]\n", argv[0]);
+            printf("​Usage: %s -n [ASIP] [-p ASport] [-m FSIP] [-q FSport]\n", argv[0]);
             exit(0);
 	} else if (!strcmp(argv[i], "-n")) {
             strcpy(asip, argv[++i]);
