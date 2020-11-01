@@ -185,8 +185,11 @@ int main(int argc, char* argv[]) {
     strcpy(asip, ASIP);
     strcpy(asport, ASPORT);
 
-    for (i = 2; i < argc; i++) {
-        if (!strcmp(argv[i], "-d")) {
+    for (i = 1; i < argc; i++) {
+        if (!strcmp(argv[i], "-h")) {
+           printf("​Usage: %s PDIP [-d PDport] [-n ASIP] [-p ASport]\n", argv[0]); 
+           exit(0);
+        } else if (!strcmp(argv[i], "-d")) {
             strcpy(pdport, argv[++i]);
         } else if (!strcmp(argv[i], "-n")) {
             strcpy(asip, argv[++i]);
