@@ -77,6 +77,7 @@ void registration(char* uid, char* pass) {
 
 char * validateRequest(char* message) {
     char command[5], uid[32], vc[32], fname[32], type[32];
+    char* res;
     char op;
     printf("message from AS: %s", message);
     sscanf(message, "%s %s %s %c", command, uid, vc, &op);
@@ -104,7 +105,9 @@ char * validateRequest(char* message) {
             sscanf(message, "%s %s %s %c", command, uid, vc, &op);
             sprintf(message, "VC=%s, %s\n", vc, type); 
         }
-        return "RVC OK\n";
+        res = (char*)malloc(32*sizeof(char));
+        sprintf(res, "RVC %s OK\n", uid);
+        return res;   // TODO tid
     } else {
         return "ERR\n";
     }

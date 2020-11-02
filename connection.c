@@ -1,5 +1,6 @@
 #include <unistd.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -77,8 +78,11 @@ void tcpConnect(char *ip, char *port, int *fd, struct addrinfo **res) {
     n = getaddrinfo(ip, port, &hints, res);
     if (n != 0) errorExit("tcpConnect: getaddrinfo()");
 
+    printf("halo\n");
+
     n = connect(*fd, (*res)->ai_addr, (*res)->ai_addrlen);
     if (n == -1) errorExit("tcpConnect: connect()");
+    printf("%d\n", n);
 }
 
 /* void udpSend(int fd, struct addrinfo *res) {

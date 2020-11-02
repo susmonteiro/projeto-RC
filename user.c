@@ -85,6 +85,11 @@ void validateCode() {
 }
 
 void endUser() {
+    char message[64];
+    int n;
+    strcpy(message, "CLOSED\n");
+    n = write(fd, message, strlen(message));
+    if (n == -1) errorExit("write()");
     freeaddrinfo(res);
     close(fd);
     exit(0);
