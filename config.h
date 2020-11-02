@@ -13,5 +13,8 @@
 // 57000 + GN --> 57022
 #define PDPORT "57022"
 
+// IP address of the machine where the file server (FS)
 #define FSIP "localhost"
-#define FSPORT "1"
+// well-known TCP port where the FS server accepts requests
+// 59000 + GN --> 59022
+#define FSPORT "59022"
