@@ -290,3 +290,4 @@ Request and reply messages:
 - o que é suposto acontecer quando o AS recebe um RVC UID OK e RVC UID NOK?
 - quando é enviamos um RRQ NOK? Quando o uid não corresponde a um PD registado? ou quando o AS não consegue enviar o VC ao PD?
 - em que situações é que é suposto
+- numa ligação tcp, definimos o numero maximo de clientes que se podem estar a tentar ligar ao servidor ao mesmo tempo (na funcao listen). Como devemos tratar o caso em que um user se tenta ligar por tcp mas não consegue? Voltar a tentar? Matar o user?
