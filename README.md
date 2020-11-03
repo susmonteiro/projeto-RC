@@ -279,15 +279,22 @@ Request and reply messages:
 - SIGINT para quando se carrega no ctrl+c o programa terminar ordeiramente
 - fix sendto sending too many chars
 - close connections on exit
+- reads dentro de um ciclo para garantir que tudo foi lido (e os writes?) --> verificar que foram lidos menos do que o número de bytes possivel de ler no read. Se não, ver se terminou num '\n' e se não significa que há mais por ler
+- quando há uma falha num comando, deve-se terminar ordeiramente
+- no read, n=0 significa que a sessão fechou
 
 ---
 ---
 ## Questions:
-- terminar ordeiramente: só nos clientes, quando recebem uma resposta estranha do servidor e no servidor enviar apenas um "ERR" de volta ou terminar também no caso de ser um servidor?
+- terminar ordeiramente: só nos clientes, quando recebem uma resposta estranha do servidor e no servidor enviar apenas um "ERR" de volta ou terminar também no caso de ser um servidor? 
+> no caso do AS e do FS fechar apenas a ligação correspondente
 - quando terminamos o PD com ctrl+c, é suposto o PD fazer unregister com o AS certo? Ou seja, é chamar a funcao unregistration()?
+> sim
 - o que acontece se o PD fizer unregistration() e o as mandar um NOK?
+> fazemos um print no pd a informar que houve um erro, mas terminamos na mesma
 - registration no PD: é suposto termos um timer, depois de enviarmos a mensagem e se passado x segundos não obtivermos resposta do AS, voltar a mandar o pedido? Fazer um print no terminal a avisar o PD que não foi possível fazer o registo? 
+> ter um timer, voltar a enviar. Se enviar várias vezes escrever no terminal que não foi possível comunicar com o servidor e morrer
 - o que é suposto acontecer quando o AS recebe um RVC UID OK e RVC UID NOK?
 - quando é enviamos um RRQ NOK? Quando o uid não corresponde a um PD registado? ou quando o AS não consegue enviar o VC ao PD?
-- em que situações é que é suposto
 - numa ligação tcp, definimos o numero maximo de clientes que se podem estar a tentar ligar ao servidor ao mesmo tempo (na funcao listen). Como devemos tratar o caso em que um user se tenta ligar por tcp mas não consegue? Voltar a tentar? Matar o user?
+> pressupor que tal não acontece. Se o user não se conseguir ligar, morre e é a própria pessoa que 
