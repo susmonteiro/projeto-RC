@@ -113,7 +113,6 @@ char * validateRequest(char* message) {
     }
 }
 
-
 void fdManager() {
     int n; 
     char reply[9];
