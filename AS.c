@@ -57,7 +57,7 @@ void request(char* uid, char* rid, char* fop, char* fname) {
     char message[64], reply[32];
     int n, vc;
 
-    printf("booh\n");
+    printf("booh\n"); // DEBUG
 
     vc = rand() % 9999;
 
@@ -159,8 +159,6 @@ void userSession(int ind) {
     }
 }
 
-
-
 char* registration(char* uid, char* pass, char* pdip_new, char* pdport_new) {
     char message[64];
     printv("unimplemented");
@@ -199,10 +197,10 @@ void endAS() {
     freeaddrinfo(res_udp_client);
     close(fd_udp);
     close(fd_udp_client);
-
-    for (i=0; i< numClients; i++) close(fd_array[i].fd);
     freeaddrinfo(res_tcp);
     close(fd_tcp);
+    for (i=0; i<numClients; i++)
+        close(fd_array[i].fd);
     printf("goodbye\n");
     exit(0);
 }
@@ -219,7 +217,10 @@ int main(int argc, char* argv[]) {
     strcpy(asport, ASPORT);
 
     for (i = MINARGS; i < argc; i++) {
-        if (!strcmp(argv[i], "-v")) {
+        if (!strcmp(argv[i], "-h")) {
+            printf("​Usage: %s -p [ASport] [-v]\n", argv[0]);
+            exit(0);
+        } else if (!strcmp(argv[i], "-v")) {
             verbose = TRUE;  
         } else if (!strcmp(argv[i], "-p")) {
             strcpy(asport, argv[++i]);
@@ -267,7 +268,7 @@ int main(int argc, char* argv[]) {
             if (n == -1) printError("main: sendto()");
         } 
         if (FD_ISSET(fd_udp_client, &rset)) {
-            printv("estou aqui\n");
+            printv("estou aqui\n"); // DEBUG
             n = recvfrom(fd_udp_client, reply, 32, 0, (struct sockaddr*) &addr_udp_client, &addrlen_udp_client);
             if (n == -1) printError("request: recvfrom()");
             reply[n] = '\0';
@@ -275,7 +276,7 @@ int main(int argc, char* argv[]) {
             confirm_validation(reply);
         }
         if (FD_ISSET(fd_tcp, &rset)) {
-            printv("entrei");
+            printv("entrei"); // DEBUG
             for (int i=0; i<numClients; i++) {
                 if (fd_array[i].fd == -5) {
                     if ((fd_array[i].fd = accept(fd_tcp, (struct sockaddr *) &addr_tcp, &addrlen_tcp)) == -1) printError("main: accept()");

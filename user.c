@@ -117,6 +117,10 @@ void fdManager() {
             n = read(fd, reply, 10);
             //printf("%d\n", n); //DEBUG
             if (n == -1) errorExit("read()");
+            else if (n == 0) {
+                printf("AS closed\n");
+                endUser();
+            }
             reply[n] = '\0';
 
             //printf("server reply: %s", reply); /* DEBUG */ // TODO remove this
@@ -134,12 +138,12 @@ void fdManager() {
                 printf("Request successful\n"); // TODO change this
             else if (!strcmp(reply, "RRQ NOK\n"))
                 printf("Request was a failureeee you a failureeee\n"); // TODO change this
-            else if (!strcmp(acr, "RAU")) {
+            else if (!strcmp(acr, "RAU"))
                 printf("Authenticated! (TID=%s)\n", tid);
+            else {
+                printf("Unknown message from AS\n");
+                endUser();
             }
-            else
-                printf("nope, not working\n");
-            
         }
         
         if (FD_ISSET(STDIN, &rset)) {
@@ -167,7 +171,7 @@ int main(int argc, char* argv[]) {
     int i;
    
     if (argc < MINARGS || argc > MAXARGS) {
-        printf("​Usage: %s -n ASIP] [-p ASport] [-m FSIP] [-q FSport]\n", argv[0]);
+        printf("​Usage: %s [-n ASIP] [-p ASport] [-m FSIP] [-q FSport]\n", argv[0]);
         errorExit("incorrect number of arguments");
     }
 
@@ -180,7 +184,10 @@ int main(int argc, char* argv[]) {
     //printf("%s\n", asport); //DEBUG
 
     for (i = 1; i < argc; i++) {
-        if (!strcmp(argv[i], "-n")) {
+        if (!strcmp(argv[i], "-h")) {
+            printf("​Usage: %s [-n ASIP] [-p ASport] [-m FSIP] [-q FSport]\n", argv[0]);
+            exit(0);
+        } else if (!strcmp(argv[i], "-n")) {
             strcpy(asip, argv[++i]);
             //printf("%s\n", asip); //DEBUG
         } else if (!strcmp(argv[i], "-p")) {
@@ -197,6 +204,7 @@ int main(int argc, char* argv[]) {
     sprintf(rid, "%d", rand() % 9999);
 
     signal(SIGINT, endUser);
+    signal(SIGPIPE, endUser);
 
     fdManager();
 
