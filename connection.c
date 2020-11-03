@@ -49,7 +49,7 @@ void tcpOpenConnection(char *port, int *fd, struct addrinfo **res) {
     struct addrinfo hints;
 
     *fd = socket(AF_INET,SOCK_STREAM,0);
-    if(*fd == -1) printError("tcpOpenConnection: socket()");
+    if(*fd == -1) errorExit("tcpOpenConnection: socket()");
 
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_INET;
@@ -57,10 +57,10 @@ void tcpOpenConnection(char *port, int *fd, struct addrinfo **res) {
     hints.ai_flags = AI_PASSIVE;
 
     errcode = getaddrinfo(NULL, port, &hints, res);
-    if(errcode != 0) printError("tcpOpenConnection: getaddrinfo()");
+    if(errcode != 0) errorExit("tcpOpenConnection: getaddrinfo()");
 
     n = bind(*fd, (*res)->ai_addr, (*res)->ai_addrlen);
-    if(n == -1) printError("tcpOpenConnection: bind()");
+    if(n == -1) errorExit("tcpOpenConnection: bind()");
 }
 
 void tcpConnect(char *ip, char *port, int *fd, struct addrinfo **res) {
