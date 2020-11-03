@@ -41,21 +41,21 @@ void printv(char* message) {
     if (verbose == TRUE) printf("%s\n", message);
 }
 
-char* login(tcp_client client, char* uid, char* pass) {
+char* login(int ind, char* uid, char* pass) {
     char message[64];
     printv("unimplemented");
-    strcpy(client.uid, uid);
-    client.uid[5] = '\0';
+    printv(uid);
+    strcpy(fd_array[ind].uid, uid);
+    fd_array[ind].uid[5] = '\0';
+    printv(uid);
     sprintf(message, "User: login ok, UID=%s", uid);
     printv(message);
     return "RLO OK\n";
 }
 
 void request(char* uid, char* rid, char* fop, char* fname) {
-    char message[64];
+    char message[64], reply[32];
     int n, vc;
-    
-    printf("%c", fname[0]);
 
     printf("booh\n");
 
@@ -70,28 +70,30 @@ void request(char* uid, char* rid, char* fop, char* fname) {
     }
     
     if (fname[0] != '\0') {
-        //printf("entrouuuuu\n");
-        sprintf(message, "VLC %s %d %s %s\n", uid, vc, fop, fname);
-        //printf("message: %s, continua\n", message);
+        printf("entrouuuuu\n");
+        sprintf(reply, "VLC %s %d %s %s\n", uid, vc, fop, fname);
+        printf("reply: %s, continua\n", reply);
     }
-    else sprintf(message, "VLC %s %d %s\n", uid, vc, fop);
+    else sprintf(reply, "VLC %s %d %s\n", uid, vc, fop);
 
-    n = sendto(fd_udp_client, message, strlen(message), 0, res_udp_client->ai_addr, res_udp_client->ai_addrlen);
+    n = sendto(fd_udp_client, reply, strlen(reply), 0, res_udp_client->ai_addr, res_udp_client->ai_addrlen);
     if (n == -1) printError("request: sendto()");
 }
 
 void confirm_validation(char* reply) {
     char uid[7], state[5], message[32];
     int i, n;
-
+    printf("olaaaa\n");
+    printf("%s", reply);
     sscanf(reply, "RVC %s %s", uid, state);
 
     for(i = 0; i < numClients; i++) {
+        printf("%s", fd_array[i].uid);
         if (!strcmp(fd_array[i].uid, uid)) {
             printf("yeeeey\n");
-            if (!strcmp(state, "OK\n"))
+            if (!strcmp(state, "OK"))
                 strcpy(message, "RRQ OK\n");
-            else if (!strcmp(state, "NOK\n"))
+            else if (!strcmp(state, "NOK"))
                 strcpy(message, "RRQ NOK\n");
             else
                 strcpy(message, "ERR\n");
@@ -118,20 +120,21 @@ char* secondAuthentication(char* uid, char* rid, char* vc) {
     return res;   // TODO tid
 }
 
-void userSession(tcp_client client) {
-    int n;
+void userSession(int ind) {
+    int n, fd;
     char buffer[128], command[5], arg1[32], arg2[32], arg3[32], arg4[32];
 
-    n = read(client.fd, buffer, 128);
+    n = read(fd_array[ind].fd, buffer, 128);
     if (n == -1) printError("userSession: read()");
-
-    buffer[n] = '\0';
-
-    if (!strcmp(buffer, "CLOSED\n")) {
-        close(client.fd);
-        client.fd = -5;
+    else if (n == 0) {
+        fd = fd_array[ind].fd;
+        printf("vai fechar\n");
+        close(fd);
+        fd_array[ind].fd = -5;
         return;
     }
+
+    buffer[n] = '\0';
 
     sscanf(buffer, "%s %s %s %s", command, arg1, arg2, arg3);
 
@@ -141,7 +144,7 @@ void userSession(tcp_client client) {
         arg4[0] = '\0';
     }
     if (!strcmp(command, "LOG")) {
-        strcpy(buffer, login(client, arg1, arg2));
+        strcpy(buffer, login(ind, arg1, arg2));
 
     } else if (!strcmp(command, "REQ")) {
         request(arg1, arg2, arg3, arg4);
@@ -150,8 +153,8 @@ void userSession(tcp_client client) {
         printf("%s\n", buffer);
     }
     if (strcmp(command, "REQ")) {
-        printf("entrei\n");
-        n = write(client.fd, buffer, strlen(buffer));
+        printf("whats up\n");
+        n = write(fd_array[ind].fd, buffer, strlen(buffer));
         if (n == -1) printError("userSession: write()"); 
     }
 }
@@ -238,12 +241,15 @@ int main(int argc, char* argv[]) {
         printf("continuo aqui\n");
         FD_ZERO(&rset);
         FD_SET(fd_udp, &rset);
+        FD_SET(fd_udp_client, &rset);
         FD_SET(fd_tcp, &rset);
 
-        for (i=0; i<numClients; i++)
-            FD_SET(fd_array[i].fd, &rset);
+        for (i=0; i<numClients; i++) {
+            if (fd_array[i].fd != -5)
+                FD_SET(fd_array[i].fd, &rset);
+        }
 
-        maxfdp1 = MAX(fd_tcp, fd_udp) + 1;
+        maxfdp1 = MAX(MAX(fd_tcp, fd_udp), fd_udp_client) + 1;
         
         for (i=0; i<numClients; i++) {
             maxfdp1 = MAX(maxfdp1, fd_array[i].fd) + 1;
@@ -261,6 +267,7 @@ int main(int argc, char* argv[]) {
             if (n == -1) printError("main: sendto()");
         } 
         if (FD_ISSET(fd_udp_client, &rset)) {
+            printv("estou aqui\n");
             n = recvfrom(fd_udp_client, reply, 32, 0, (struct sockaddr*) &addr_udp_client, &addrlen_udp_client);
             if (n == -1) printError("request: recvfrom()");
             reply[n] = '\0';
@@ -280,6 +287,7 @@ int main(int argc, char* argv[]) {
             if(tcp_flag == 0) {
                 if ((fd_array[numClients++].fd = accept(fd_tcp, (struct sockaddr *) &addr_tcp, &addrlen_tcp)) == -1) printError("main: accept()");
                 fd_array = (tcp_client*)realloc(fd_array, sizeof(struct tcp_client) * (numClients + 1));
+                printf("%d\n", numClients);
             }
             else tcp_flag = 0;
             // userSession(fd_array[numClients - 1]);
@@ -287,7 +295,7 @@ int main(int argc, char* argv[]) {
     
         for (i=0; i<numClients; i++) {
             if (FD_ISSET(fd_array[i].fd, &rset)) {
-                userSession(fd_array[i]);
+                userSession(i);
             }
         }
     }

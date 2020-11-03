@@ -94,19 +94,24 @@ char * validateRequest(char* message) {
             break;
         case 'U':
             strcpy(type, "upload");
+            break;
         case 'X':
             strcpy(type, "delete");
+            break;
         }
-        if (op == 'R' || op == 'U' || op == 'L' || op == 'D') {
+        if (op == 'R' || op == 'U' || op == 'D') {
             sscanf(message, "%s %s %s %c %s", command, uid, vc, &op, fname);
             sprintf(message, "VC=%s, %s:%s\n", vc, type, fname);
+            printf("%s", message);
         }
         else {
             sscanf(message, "%s %s %s %c", command, uid, vc, &op);
-            sprintf(message, "VC=%s, %s\n", vc, type); 
+            sprintf(message, "VC=%s, %s\n", vc, type);
+            printf("%s", message);
         }
         res = (char*)malloc(32*sizeof(char));
         sprintf(res, "RVC %s OK\n", uid);
+        printf("%s", res);
         return res;   // TODO tid
     } else {
         return "ERR\n";
@@ -146,7 +151,7 @@ void fdManager() {
             buffer[n] = '\0';
             printf("received message from as: %s\n", buffer);
 
-            n = sendto(fd_udp, validateRequest(buffer), n, 0, (struct sockaddr*) &addr_udp, addrlen_udp);
+            n = sendto(fd_udp, validateRequest(buffer), 32, 0, (struct sockaddr*) &addr_udp, addrlen_udp);
             if (n == -1) errorExit("sendto()");
         }
 
