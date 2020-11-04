@@ -1,0 +1,50 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+typedef struct Node {
+    int i;
+    struct Node *next;
+} Message;
+
+Message *head = NULL;
+Message *last = NULL;
+
+int n = 0;
+
+
+void push() {
+    Message *new = (Message*)malloc(sizeof(Message));
+    new->i = n++;
+
+    if (head == NULL) {
+        head = new;
+    } else {
+        last->next = new;
+    }
+    last = new;
+    last->next = NULL;
+}
+
+Message* pop() {
+    Message *out = head;
+    if (out->next == NULL) {
+        head = NULL;
+        last = NULL;
+    } else {
+        head = out->next;
+    }
+
+    return out;
+}
+
+// DEBUG - remove main
+int main() {
+    push();
+    push();
+    push();
+    while (head != NULL) {
+        printf("num: %d\n", pop()->i);
+    }   
+    return 0;
+}
