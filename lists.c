@@ -3,13 +3,15 @@
 #include <stdlib.h>
 
 typedef struct Node {
-    int i;
+    int i;  // DEBUG - remove this and add wanted values
     struct Node *next;
 } Message;
 
+// DEBUG - add these 2 lines to specific file
 Message *head = NULL;
 Message *last = NULL;
 
+// DEBUG - remove this
 int n = 0;
 
 
