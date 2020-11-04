@@ -44,7 +44,7 @@ The PD application can also receive a command to exit, unregistering the user.
 #define MAX(a, b) a*(a>b) + b*(b>=a)
 
 void fdManager();
-void endPD();
+void freePD();
 void unregistration();
 
 int fd_udp_client, fd_udp;
@@ -73,7 +73,7 @@ void resetLastMessage() {
 
 void resendMessage() {
     int n;
-    if (numTries++ > 2) endPD();
+    if (numTries++ > 2) freePD();
     n = sendto(fd_udp_client, lastMessage, strlen(lastMessage)*sizeof(char), 0, res_udp_client->ai_addr, res_udp_client->ai_addrlen);
     if (n == -1) errorExit("sendto()");
     printf("Resending last message to AS...\n");
@@ -83,7 +83,7 @@ void resendMessage() {
 
 /*      === end PD ===       */
 
-void endPD() {
+void freePD() {
     printf("Exiting...\n");
     freeaddrinfo(res_udp_client);
     close(fd_udp_client);
@@ -92,7 +92,7 @@ void endPD() {
 
 void exitPD() {
     unregistration();
-    endPD();
+    freePD();
 }
 
 
@@ -235,7 +235,7 @@ void fdManager() {
             } else if (!strcmp(reply, "RUN OK\n") && typeMessage == TYPE_END) {
                 resetLastMessage();
                 printf("Unregistration successful\n");
-                endPD();
+                freePD();
             } else if (!strcmp(reply, "RUN NOK\n") && typeMessage == TYPE_END) {
                 resetLastMessage();
                 printf("Error: unregistration unsuccessful\n");
@@ -245,8 +245,6 @@ void fdManager() {
         } 
     }
 }
-
-
 
 
 
