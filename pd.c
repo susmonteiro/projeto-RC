@@ -70,7 +70,6 @@ void unregistration() {
 }
 
 void endPD() {
-    unregistration();
     printf("Exiting...\n");
     freeaddrinfo(res_udp_client);
     close(fd_udp_client);
@@ -196,11 +195,11 @@ void fdManager() {
                 printf("Error: registration successful\n");
             } else if (!strcmp(reply, "RUN OK\n") && typeMessage == TYPE_END) {
                 resetLastMessage();
-                printf("Unregistration successful\nExiting...\n");
+                printf("Unregistration successful\n");
                 endPD();
             } else if (!strcmp(reply, "RUN NOK\n") && typeMessage == TYPE_END) {
                 resetLastMessage();
-                printf("Error: unregistration unsuccessful\nExiting...\n");
+                printf("Error: unregistration unsuccessful\n");
             } else {
                 printf("Error: unexpected answer from AS\n");
             }
