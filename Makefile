@@ -3,7 +3,7 @@ LD=gcc
 CFLAGS=-Wall
 LDFLAGS=
 
-.PHONY: clean
+all: AS FS pd user
 
 AS: AS.c config.h error.c error.h connection.c connection.h
 	$(CC) $(CFLAGS) AS.c error.c connection.c -o AS
@@ -19,4 +19,4 @@ user: user.c config.h error.c error.h connection.c connection.h
 
 clean:
 	@echo Cleaning...
-	rm -f user AS pd
+	rm -f AS FS pd user
