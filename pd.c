@@ -8,6 +8,17 @@ Then it waits for validation codes (VC) sent by the AS, which should be displaye
 The PD application can also receive a command to exit, unregistering the user.
 */
 
+
+/* ===      TODO in PD      === 
+    - clean function validateRequest
+    - clean repeated code -> for example, both registration and unresgistration functions 
+    handle lastMessage similarly -> can we do it in a smarter way? 
+    - check if PD can only register once. Should we check if there is a uid and pass already assigned? -> I think AS should do that
+    - organize variables
+    - do we need all of these includes?
+    - check if there are functions common to other files (#define MAX for example)
+*/
+
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -33,6 +44,8 @@ The PD application can also receive a command to exit, unregistering the user.
 #define MAX(a, b) a*(a>b) + b*(b>=a)
 
 void fdManager();
+void endPD();
+void unregistration();
 
 int fd_udp_client, fd_udp;
 fd_set rset;
@@ -48,6 +61,9 @@ char pdip[32], pdport[8], asip[32], asport[8];
 char command[6], uid[7], pass[10], buffer[32];
 int maxfdp1;
 
+
+/*      === resend messages that were not acknowledge ===       */
+
 void resetLastMessage() {
     typeMessage = NO_MSG;
     lastMessage[0] = '\0';
@@ -55,19 +71,17 @@ void resetLastMessage() {
     alarm(0);
 }
 
-void unregistration() {
-    int n, len;
-    char message[64];
-
-    len = sprintf(message, "UNR %s %s\n", uid, pass);
-    if (len < 0) errorExit("sprintf()");
-
-    n = sendto(fd_udp_client, message, len*sizeof(char), 0, res_udp_client->ai_addr, res_udp_client->ai_addrlen);
+void resendMessage() {
+    int n;
+    if (numTries++ > 2) endPD();
+    n = sendto(fd_udp_client, lastMessage, strlen(lastMessage)*sizeof(char), 0, res_udp_client->ai_addr, res_udp_client->ai_addrlen);
     if (n == -1) errorExit("sendto()");
-    strcpy(lastMessage, message);
-    typeMessage = TYPE_END;
+    printf("Resending last message to AS...\n");
     alarm(2);
 }
+
+
+/*      === end PD ===       */
 
 void endPD() {
     printf("Exiting...\n");
@@ -75,6 +89,14 @@ void endPD() {
     close(fd_udp_client);
     exit(0);
 }
+
+void exitPD() {
+    unregistration();
+    endPD();
+}
+
+
+/*      === command functions ===        */
 
 void registration(char* uid, char* pass) {
     int n, len;
@@ -93,6 +115,20 @@ void registration(char* uid, char* pass) {
     if (n == -1) errorExit("sendto()");
     strcpy(lastMessage, message);
     typeMessage = TYPE_REG;
+    alarm(2);
+}
+
+void unregistration() {
+    int n, len;
+    char message[64];
+
+    len = sprintf(message, "UNR %s %s\n", uid, pass);
+    if (len < 0) errorExit("sprintf()");
+
+    n = sendto(fd_udp_client, message, len*sizeof(char), 0, res_udp_client->ai_addr, res_udp_client->ai_addrlen);
+    if (n == -1) errorExit("sendto()");
+    strcpy(lastMessage, message);
+    typeMessage = TYPE_END;
     alarm(2);
 }
 
@@ -138,6 +174,9 @@ char * validateRequest(char* message) {
         return "ERR\n";
     }
 }
+
+
+/*      === main code ===        */
 
 void fdManager() {
     int n; 
@@ -207,14 +246,7 @@ void fdManager() {
     }
 }
 
-void resendMessage() {
-    int n;
-    if (numTries++ > 2) endPD();
-    n = sendto(fd_udp_client, lastMessage, strlen(lastMessage)*sizeof(char), 0, res_udp_client->ai_addr, res_udp_client->ai_addrlen);
-    if (n == -1) errorExit("sendto()");
-    printf("Resending last message to AS...\n");
-    alarm(2);
-}
+
 
 
 
@@ -248,7 +280,7 @@ int main(int argc, char* argv[]) {
     addrlen_udp = sizeof(addr_udp);
     udpConnect(asip, asport, &fd_udp_client, &res_udp_client);
 
-    signal(SIGINT, endPD);
+    signal(SIGINT, exitPD);
     signal(SIGALRM, resendMessage);
 
     fdManager();
