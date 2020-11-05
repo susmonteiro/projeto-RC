@@ -237,6 +237,7 @@ void fdManager() {
                 printf("Error: unregistration unsuccessful\n");
             } else {
                 printf("Error: unexpected answer from AS\n");
+                exitPD();
             }
         }
     }
