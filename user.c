@@ -36,6 +36,8 @@ char op;
 /*      === end User ===       */
 
 void endUser() {
+    freeaddrinfo(res);
+    close(fd);
     exit(0);
 }
 
@@ -119,6 +121,8 @@ void fdManager() {
             } else if (!strcmp(command, "val")) {
                 scanf("%s", vc);
                 validateCode();
+            } else if (!strcmp(command, "exit")) {
+                endUser();
             } else
                 printf("Error: invalid command\n");
         }
