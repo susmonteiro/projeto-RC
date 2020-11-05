@@ -192,7 +192,7 @@ void fdManager() {
                 printf("Registration successful\n");
             } else if (!strcmp(reply, "RRG NOK\n") && typeMessage == TYPE_REG) {
                 resetLastMessage();
-                printf("Error: registration successful\n");
+                printf("Error: already registered\n");
             } else if (!strcmp(reply, "RUN OK\n") && typeMessage == TYPE_END) {
                 resetLastMessage();
                 printf("Unregistration successful\n");
