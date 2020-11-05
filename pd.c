@@ -61,6 +61,7 @@ char pdip[32], pdport[8], asip[32], asport[8];
 char command[6], uid[7], pass[10], buffer[32];
 int maxfdp1;
 
+
 /*      === resend messages that were not acknowledge ===       */
 
 void resetLastMessage() {
@@ -75,7 +76,6 @@ void resendMessage() {
     if (numTries++ > 2) freePD();
     n = sendto(fd_udp_client, lastMessage, strlen(lastMessage) * sizeof(char), 0, res_udp_client->ai_addr, res_udp_client->ai_addrlen);
     if (n == -1) errorExit("sendto()");
-    printf("Resending last message to AS...\n");
     alarm(2);
 }
 
@@ -96,6 +96,7 @@ void exitPD() {
 /*      === command functions ===        */
 
 void registration(char *uid, char *pass) {
+    // reg UID pass
     int n, len;
     char message[64];
 
@@ -107,7 +108,6 @@ void registration(char *uid, char *pass) {
     len = sprintf(message, "REG %s %s %s %s\n", uid, pass, pdip, pdport);
     if (len < 0) errorExit("sprintf()");
 
-    //printf("our message: %s", message); // DEBUG
     n = sendto(fd_udp_client, message, len * sizeof(char), 0, res_udp_client->ai_addr, res_udp_client->ai_addrlen);
     if (n == -1) errorExit("sendto()");
     strcpy(lastMessage, message);
@@ -116,6 +116,7 @@ void registration(char *uid, char *pass) {
 }
 
 void unregistration() {
+    // exit
     int n, len;
     char message[64];
 
@@ -187,10 +188,7 @@ void fdManager() {
         maxfdp1 = MAX(maxfdp1, fd_udp_client) + 1;
 
         n = select(maxfdp1, &rset, NULL, NULL, NULL);
-        if (n == -1) {
-            printError("select(): interrupted by signal"); // TODO change this
-            continue;
-        }
+        if (n == -1) continue; // if interrupted by SIGALRM
 
         if (FD_ISSET(STDIN, &rset)) {
             if (typeMessage == NO_MSG) { // reads message if there are none waiting to be acknowledge
@@ -209,7 +207,6 @@ void fdManager() {
             n = recvfrom(fd_udp, buffer, 32, 0, (struct sockaddr *)&addr_udp, &addrlen_udp);
             if (n == -1) errorExit("recvfrom()");
             buffer[n] = '\0';
-            //printf("received message from as: %s\n", buffer);
 
             n = sendto(fd_udp, validateRequest(buffer), 32, 0, (struct sockaddr *)&addr_udp, addrlen_udp);
             if (n == -1) errorExit("sendto()");
@@ -220,7 +217,6 @@ void fdManager() {
             if (n == -1) errorExit("recvfrom()");
             reply[n] = '\0';
 
-            //printf("server reply: %s", reply);  /* debug */ // TODO remove this
 
             if (!strcmp(reply, "RRG OK\n") && typeMessage == TYPE_REG) {
                 resetLastMessage();
