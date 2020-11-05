@@ -298,3 +298,6 @@ Request and reply messages:
 - quando é enviamos um RRQ NOK? Quando o uid não corresponde a um PD registado? ou quando o AS não consegue enviar o VC ao PD?
 - numa ligação tcp, definimos o numero maximo de clientes que se podem estar a tentar ligar ao servidor ao mesmo tempo (na funcao listen). Como devemos tratar o caso em que um user se tenta ligar por tcp mas não consegue? Voltar a tentar? Matar o user?
 > pressupor que tal não acontece. Se o user não se conseguir ligar, morre e é a própria pessoa que 
+
+#### Novas questões:
+- confirmar que o PD só pode ter um uid e pass (e portanto que o AS deve devolver NOK se o PD se tenta registar com um uid e pass diferentes)
