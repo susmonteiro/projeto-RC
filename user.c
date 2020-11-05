@@ -41,7 +41,11 @@ void endUser() {
     exit(0);
 }
 
+
+/*      === command functions ===        */
+
 void login() {
+    // login UID pass
     int n;
     char message[64];
     sprintf(message, "LOG %s %s\n", uid, pass);
@@ -51,6 +55,7 @@ void login() {
 }
 
 void requestFile() {
+    // req Fop [Fname]
     int n;
     char message[64];
 
