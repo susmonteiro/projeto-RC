@@ -265,7 +265,7 @@ Request and reply messages:
 - include the programs implementing the *User*, the *PD*, the *AS* server and the *FS* server
 - include de *Makefile*, which should compile the code and place the executables in the current directory with the `make` command
 - include auxiliary files needed for the project, with a readme.txt file
-- create a *zip* archive with all source code, makefile and auxiliray files
+- create a *zip* archive with all source code, makefile and auxiliary files
 - name of zip: `proj_22.zip`
 
 > submition by email until **November 13, at 23:59 PM**
