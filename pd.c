@@ -16,6 +16,7 @@ The PD application can also receive a command to exit, unregistering the user.
     - organize variables
     - do we need all of these includes?
     - check if there are functions common to other files (#define MAX for example)
+    - problem: if a pd is registered twice (the second time not successfully right?), we shouldn't save the uid and pass until we have confirmation from AS
 */
 
 #include "config.h"
