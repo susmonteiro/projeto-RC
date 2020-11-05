@@ -301,3 +301,4 @@ Request and reply messages:
 
 #### Novas questões:
 - confirmar que o PD só pode ter um uid e pass (e portanto que o AS deve devolver NOK se o PD se tenta registar com um uid e pass diferentes)
+- quando se faz uma unregistration é suposto apagar mesmo o registo?
