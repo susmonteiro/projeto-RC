@@ -16,6 +16,7 @@
 - [Project Submission](#project-submission)
 - [Checklist](#checklist)
 - [Questions](#questions)
+- [TODO](#todo)
 ---
 ## Introduction
 Password + code sent to personal device
@@ -302,3 +303,24 @@ Request and reply messages:
 #### Novas questões:
 - confirmar que o PD só pode ter um uid e pass (e portanto que o AS deve devolver NOK se o PD se tenta registar com um uid e pass diferentes)
 - quando se faz uma unregistration é suposto apagar mesmo o registo?
+
+
+---
+---
+## TODO:
+- verificar que os ficheiros estao sempre a terminar como deve de ser e que os servidores nunca morrem quando recebem algo inválido [**Susana**]
+- resend de mensagens no AS (e no FS) [**Susana**]
+
+- PD
+- AS -> guardar registos em ficheiros, numa pasta
+    - comunicação com PD [**Rodrigo**]
+    - comunicação com User [**Rodrigo**]
+    - comunicação com FS [**Sancha**]
+- User 
+    - comunicação com FS [**Susana**]
+    - comando x e remove not working (ver comandos que faltam) [**Susana**]
+- FS
+    - guardar em ficheiros [**Rodrigo**]
+    - comunicação com AS [**Sancha**]
+    - comunicação com User [**Susana**]
+
