@@ -1,18 +1,18 @@
-#include <unistd.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <signal.h>
-#include <sys/select.h>
 #include "config.h"
 #include "connection.h"
 #include "error.h"
+#include <arpa/inet.h>
+#include <errno.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/select.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #define MAXARGS 8
 #define MINARGS 1
@@ -27,7 +27,7 @@ struct sockaddr_in addr_udp, addr_tcp;
 char fsport[8], asport[8], asip[32];
 
 // print if verbose mode
-void printv(char* message) {    // TODO move to common file
+void printv(char *message) { // TODO move to common file
     if (verbose == TRUE) printf("%s\n", message);
 }
 
@@ -40,9 +40,7 @@ void endFS() {
     exit(0);
 }
 
-
-
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
     int i, n;
 
     if (argc < MINARGS || argc > MAXARGS) {
@@ -55,7 +53,7 @@ int main(int argc, char* argv[]) {
 
     for (i = MINARGS; i < argc; i++) {
         if (!strcmp(argv[i], "-v")) {
-            verbose = TRUE;             // TODO move to common file
+            verbose = TRUE; // TODO move to common file
         } else if (!strcmp(argv[i], "-q")) {
             strcpy(fsport, argv[++i]);
         } else if (!strcmp(argv[i], "-p")) {

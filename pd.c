@@ -8,7 +8,6 @@ Then it waits for validation codes (VC) sent by the AS, which should be displaye
 The PD application can also receive a command to exit, unregistering the user.
 */
 
-
 /* ===      TODO in PD      === 
     - clean function validateRequest
     - clean repeated code -> for example, both registration and unresgistration functions 
@@ -19,20 +18,20 @@ The PD application can also receive a command to exit, unregistering the user.
     - check if there are functions common to other files (#define MAX for example)
 */
 
-#include <unistd.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <signal.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <sys/select.h>
 #include "config.h"
 #include "connection.h"
 #include "error.h"
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/select.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #define MAXARGS 8
 #define MINARGS 2
@@ -41,7 +40,7 @@ The PD application can also receive a command to exit, unregistering the user.
 #define TYPE_REG 1
 #define TYPE_END 2
 
-#define MAX(a, b) a*(a>b) + b*(b>=a)
+#define MAX(a, b) a *(a > b) + b *(b >= a)
 
 void fdManager();
 void freePD();
@@ -61,7 +60,6 @@ char pdip[32], pdport[8], asip[32], asport[8];
 char command[6], uid[7], pass[10], buffer[32];
 int maxfdp1;
 
-
 /*      === resend messages that were not acknowledge ===       */
 
 void resetLastMessage() {
@@ -74,12 +72,11 @@ void resetLastMessage() {
 void resendMessage() {
     int n;
     if (numTries++ > 2) freePD();
-    n = sendto(fd_udp_client, lastMessage, strlen(lastMessage)*sizeof(char), 0, res_udp_client->ai_addr, res_udp_client->ai_addrlen);
+    n = sendto(fd_udp_client, lastMessage, strlen(lastMessage) * sizeof(char), 0, res_udp_client->ai_addr, res_udp_client->ai_addrlen);
     if (n == -1) errorExit("sendto()");
     printf("Resending last message to AS...\n");
     alarm(2);
 }
-
 
 /*      === end PD ===       */
 
@@ -95,10 +92,9 @@ void exitPD() {
     freePD();
 }
 
-
 /*      === command functions ===        */
 
-void registration(char* uid, char* pass) {
+void registration(char *uid, char *pass) {
     int n, len;
     char message[64];
 
@@ -109,9 +105,9 @@ void registration(char* uid, char* pass) {
 
     len = sprintf(message, "REG %s %s %s %s\n", uid, pass, pdip, pdport);
     if (len < 0) errorExit("sprintf()");
-    
+
     //printf("our message: %s", message); // DEBUG
-    n = sendto(fd_udp_client, message, len*sizeof(char), 0, res_udp_client->ai_addr, res_udp_client->ai_addrlen);
+    n = sendto(fd_udp_client, message, len * sizeof(char), 0, res_udp_client->ai_addr, res_udp_client->ai_addrlen);
     if (n == -1) errorExit("sendto()");
     strcpy(lastMessage, message);
     typeMessage = TYPE_REG;
@@ -125,21 +121,21 @@ void unregistration() {
     len = sprintf(message, "UNR %s %s\n", uid, pass);
     if (len < 0) errorExit("sprintf()");
 
-    n = sendto(fd_udp_client, message, len*sizeof(char), 0, res_udp_client->ai_addr, res_udp_client->ai_addrlen);
+    n = sendto(fd_udp_client, message, len * sizeof(char), 0, res_udp_client->ai_addr, res_udp_client->ai_addrlen);
     if (n == -1) errorExit("sendto()");
     strcpy(lastMessage, message);
     typeMessage = TYPE_END;
     alarm(2);
 }
 
-char * validateRequest(char* message) {
+char *validateRequest(char *message) {
     char command[5], uid[32], vc[32], fname[32], type[32];
-    char* res;
+    char *res;
     char op;
     printf("message from AS: %s", message);
     sscanf(message, "%s %s %s %c", command, uid, vc, &op);
-    if (!strcmp(command, "VLC") && strlen(vc) == 4) {   
-        switch(op) {
+    if (!strcmp(command, "VLC") && strlen(vc) == 4) {
+        switch (op) {
         case 'L':
             strcpy(type, "list");
             break;
@@ -160,30 +156,28 @@ char * validateRequest(char* message) {
             sscanf(message, "%s %s %s %c %s", command, uid, vc, &op, fname);
             sprintf(message, "VC=%s, %s:%s\n", vc, type, fname);
             printf("%s", message);
-        }
-        else {
+        } else {
             sscanf(message, "%s %s %s %c", command, uid, vc, &op);
             sprintf(message, "VC=%s, %s\n", vc, type);
             printf("%s", message);
         }
-        res = (char*)malloc(32*sizeof(char));
+        res = (char *)malloc(32 * sizeof(char));
         sprintf(res, "RVC %s OK\n", uid);
         printf("%s", res);
-        return res;   // TODO tid
+        return res; // TODO tid
     } else {
         return "ERR\n";
     }
 }
 
-
 /*      === main code ===        */
 
 void fdManager() {
-    int n; 
+    int n;
     char reply[9];
 
-    while(1) {
-        FD_ZERO(&rset); 
+    while (1) {
+        FD_ZERO(&rset);
         FD_SET(STDIN, &rset);
         FD_SET(fd_udp, &rset);
         FD_SET(fd_udp_client, &rset);
@@ -198,29 +192,30 @@ void fdManager() {
         }
 
         if (FD_ISSET(STDIN, &rset)) {
-            if (typeMessage == NO_MSG) {     // reads message if there are none waiting to be acknowledge
+            if (typeMessage == NO_MSG) { // reads message if there are none waiting to be acknowledge
                 scanf("%s", command);
                 if (!strcmp(command, "reg")) {
                     scanf("%s %s", uid, pass);
                     registration(uid, pass);
                 } else if (!strcmp(command, "exit")) {
                     unregistration();
-                } else printf("Error: invalid command\n");
+                } else
+                    printf("Error: invalid command\n");
             }
         }
 
-        if (FD_ISSET(fd_udp, &rset)) {              // server of AS
-            n = recvfrom(fd_udp, buffer, 32, 0, (struct sockaddr*) &addr_udp, &addrlen_udp);
+        if (FD_ISSET(fd_udp, &rset)) { // server of AS
+            n = recvfrom(fd_udp, buffer, 32, 0, (struct sockaddr *)&addr_udp, &addrlen_udp);
             if (n == -1) errorExit("recvfrom()");
             buffer[n] = '\0';
             //printf("received message from as: %s\n", buffer);
 
-            n = sendto(fd_udp, validateRequest(buffer), 32, 0, (struct sockaddr*) &addr_udp, addrlen_udp);
+            n = sendto(fd_udp, validateRequest(buffer), 32, 0, (struct sockaddr *)&addr_udp, addrlen_udp);
             if (n == -1) errorExit("sendto()");
         }
 
         if (FD_ISSET(fd_udp_client, &rset)) {
-            n = recvfrom(fd_udp_client, reply, 9, 0, (struct sockaddr*) &addr_udp, &addrlen_udp);
+            n = recvfrom(fd_udp_client, reply, 9, 0, (struct sockaddr *)&addr_udp, &addrlen_udp);
             if (n == -1) errorExit("recvfrom()");
             reply[n] = '\0';
 
@@ -242,15 +237,13 @@ void fdManager() {
             } else {
                 printf("Error: unexpected answer from AS\n");
             }
-        } 
+        }
     }
 }
 
-
-
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
     int i;
-    
+
     if (argc < MINARGS || argc > MAXARGS) {
         printf("​Usage: %s PDIP [-d PDport] [-n ASIP] [-p ASport]\n", argv[0]);
         errorDIYexit("incorrect number of arguments");
@@ -263,8 +256,8 @@ int main(int argc, char* argv[]) {
 
     for (i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "-h")) {
-           printf("​Usage: %s PDIP [-d PDport] [-n ASIP] [-p ASport]\n", argv[0]); 
-           exit(0);
+            printf("​Usage: %s PDIP [-d PDport] [-n ASIP] [-p ASport]\n", argv[0]);
+            exit(0);
         } else if (!strcmp(argv[i], "-d")) {
             strcpy(pdport, argv[++i]);
         } else if (!strcmp(argv[i], "-n")) {

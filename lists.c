@@ -1,9 +1,9 @@
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 
 typedef struct Node {
-    int i;  // DEBUG - remove this and add wanted values
+    int i; // DEBUG - remove this and add wanted values
     struct Node *next;
 } Message;
 
@@ -14,9 +14,8 @@ Message *last = NULL;
 // DEBUG - remove this
 int n = 0;
 
-
 void push() {
-    Message *new = (Message*)malloc(sizeof(Message));
+    Message *new = (Message *)malloc(sizeof(Message));
     new->i = n++;
 
     if (head == NULL) {
@@ -28,7 +27,7 @@ void push() {
     last->next = NULL;
 }
 
-Message* pop() {
+Message *pop() {
     Message *out = head;
     if (out->next == NULL) {
         head = NULL;
@@ -47,6 +46,6 @@ int main() {
     push();
     while (head != NULL) {
         printf("num: %d\n", pop()->i);
-    }   
+    }
     return 0;
 }
