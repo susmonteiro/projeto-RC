@@ -32,6 +32,13 @@ char fsip[32], fsport[8], asip[32], asport[8];
 char uid[7], pass[10], vc[4], rid[5], file[32];
 char op;
 
+
+/*      === end User ===       */
+
+void endUser() {
+    exit(0);
+}
+
 void login() {
     int n;
     char message[64];
@@ -83,10 +90,6 @@ void validateCode() {
     if (n == -1) errorExit("write()");
 }
 
-void endUser() {
-    exit(0);
-}
-
 
 /*      === main code ===        */
 
@@ -136,20 +139,18 @@ void fdManager() {
             if (!strcmp(reply, "RLO OK\n"))
                 printf("You are now logged in.\n");
             else if (!strcmp(reply, "RLO NOK\n"))
-                printf("Login was a failureeee you a failureeee\n"); // TODO change this
+                printf("Error: login unsuccessful\n");
             else if (!strcmp(reply, "RRQ OK\n"))
-                printf("Request successful\n"); // TODO change this
+                printf("Request successful\n");
             else if (!strcmp(reply, "RRQ NOK\n"))
-                printf("Request was a failureeee you a failureeee\n"); // TODO change this
+                printf("Error: request unsuccessful\n");
             else if (!strcmp(acr, "RAU"))
                 printf("Authenticated! (TID=%s)\n", tid);
             else {
-                printf("Unknown message from AS\n");
+                printf("Error: unexpected answer from AS\n");
                 endUser();
             }
         }
-
-        
     }
 }
 
