@@ -1,6 +1,8 @@
 #ifndef CONNECTION_H
 #define CONNECTION_H
 
+#include <netdb.h>
+
 void udpOpenConnection(char *port, int *fd, struct addrinfo **res);
 void udpConnect(char *ip, char *port, int *fd, struct addrinfo **res);
 void tcpOpenConnection(char *port, int *fd, struct addrinfo **res);
