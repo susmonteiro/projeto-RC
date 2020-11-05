@@ -10,6 +10,7 @@
 #include <netdb.h>
 #include <signal.h>
 #include <sys/select.h>
+#include <sys/stat.h>
 #include "config.h"
 #include "connection.h"
 #include "error.h"
@@ -38,12 +39,22 @@ char asport[8], pdip[32], pdport[8];
 
 // print if verbose mode
 void printv(char* message) {
-    if (verbose == TRUE) printf("%s\n", message);
+    if (verbose) printf("%s\n", message);
 }
 
 char* login(int ind, char* uid, char* pass) {
-    char message[64];
-    printv("unimplemented");
+    char message[64], path[32], currentPass[32];
+    FILE *file;
+
+    sprintf(path, "registrations/%s", uid);
+    if ((file = fopen(path, "r")) == NULL)
+        return "RLO NOK\n";
+        
+    fscanf(file, "%s", currentPass);
+    fclose(file);
+    if (strcmp(currentPass, pass))
+        return "RLO NOK\n";
+    
     printv(uid);
     strcpy(fd_array[ind].uid, uid);
     fd_array[ind].uid[5] = '\0';
@@ -70,7 +81,7 @@ void request(char* uid, char* rid, char* fop, char* fname) {
     }
     
     if (fname[0] != '\0') {
-        printf("entrouuuuu\n");
+        printf("entrouuuuu\n"); // DEBUG
         sprintf(reply, "VLC %s %d %s %s\n", uid, vc, fop, fname);
         printf("reply: %s, continua\n", reply);
     }
@@ -83,14 +94,14 @@ void request(char* uid, char* rid, char* fop, char* fname) {
 void confirm_validation(char* reply) {
     char uid[7], state[5], message[32];
     int i, n;
-    printf("olaaaa\n");
+    printf("olaaaa\n"); // DEBUG
     printf("%s", reply);
     sscanf(reply, "RVC %s %s", uid, state);
 
     for(i = 0; i < numClients; i++) {
         printf("%s", fd_array[i].uid);
         if (!strcmp(fd_array[i].uid, uid)) {
-            printf("yeeeey\n");
+            printf("yeeeey\n"); // DEBUG
             if (!strcmp(state, "OK"))
                 strcpy(message, "RRQ OK\n");
             else if (!strcmp(state, "NOK"))
@@ -122,20 +133,21 @@ char* secondAuthentication(char* uid, char* rid, char* vc) {
 
 void userSession(int ind) {
     int n, fd;
-    char buffer[128], command[5], arg1[32], arg2[32], arg3[32], arg4[32];
+    char buffer[128], msg[256], command[5], arg1[32], arg2[32], arg3[32], arg4[32];
 
     n = read(fd_array[ind].fd, buffer, 128);
     if (n == -1) printError("userSession: read()");
     else if (n == 0) {
         fd = fd_array[ind].fd;
-        printf("vai fechar\n");
+        printf("vai fechar\n"); // DEBUG
         close(fd);
         fd_array[ind].fd = -5;
         return;
     }
 
     buffer[n] = '\0';
-
+    sprintf(msg, "message from User: %s", buffer);
+    printv(msg);
     sscanf(buffer, "%s %s %s %s", command, arg1, arg2, arg3);
 
     if (!strcmp(arg3, "D") || !strcmp(arg3, "R") || !strcmp(arg3, "U")) {
@@ -153,25 +165,45 @@ void userSession(int ind) {
         printf("%s\n", buffer);
     }
     if (strcmp(command, "REQ")) {
-        printf("whats up\n");
+        printf("whats up\n"); // DEBUG
         n = write(fd_array[ind].fd, buffer, strlen(buffer));
         if (n == -1) printError("userSession: write()"); 
     }
 }
 
 char* registration(char* uid, char* pass, char* pdip_new, char* pdport_new) {
-    char message[64];
-    printv("unimplemented");
+    char message[64], path[32];
+    FILE *file;
+
+    sprintf(path, "registrations/%s", uid);
+    if (access(path, F_OK) != -1)
+        return "RRG NOK\n";
+
+    file = fopen(path, "w");
+    fprintf(file, "%s\n%s\n%s", pass, pdip_new, pdport_new);
+    fclose(file);
     sprintf(message, "PD: new user, UID = %s", uid);
     printv(message);
-    strcpy(pdip, pdip_new);
+    /* strcpy(pdip, pdip_new);
     strcpy(pdport, pdport_new);
-    udpConnect(pdip, pdport, &fd_udp_client, &res_udp_client);
+    udpConnect(pdip, pdport, &fd_udp_client, &res_udp_client); */ // TODO remove this
     return "RRG OK\n";
 }
 
 char* unregistration(char* uid, char* pass) {
-    printv("unimplemented");
+    char path[32], currentPass[32];
+    FILE *file;
+
+    sprintf(path, "registrations/%s", uid);
+    if ((file = fopen(path, "r")) == NULL)
+        return "RUN NOK\n";
+        
+    fscanf(file, "%s", currentPass);
+    fclose(file);
+    if (strcmp(currentPass, pass))
+        return "RUN NOK\n";
+
+    remove(path);
     return "RUN OK\n";
 }
 
@@ -201,7 +233,7 @@ void endAS() {
     close(fd_tcp);
     for (i=0; i<numClients; i++)
         close(fd_array[i].fd);
-    printf("goodbye\n");
+    printf("goodbye\n"); // DEBUG
     exit(0);
 }
 
@@ -227,6 +259,8 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    mkdir("registrations", 0777);
+
     tcpOpenConnection(asport, &fd_tcp, &res_tcp);
     if (listen(fd_tcp, 5) == -1) printError("TCP: listen()");
     fd_array = (tcp_client*)malloc(sizeof(struct tcp_client));
@@ -239,7 +273,7 @@ int main(int argc, char* argv[]) {
     printv("i connected yey");
 
     while(1) {
-        printf("continuo aqui\n");
+        printf("continuo aqui\n"); // DEBUG
         FD_ZERO(&rset);
         FD_SET(fd_udp, &rset);
         FD_SET(fd_udp_client, &rset);
@@ -288,7 +322,7 @@ int main(int argc, char* argv[]) {
             if(tcp_flag == 0) {
                 if ((fd_array[numClients++].fd = accept(fd_tcp, (struct sockaddr *) &addr_tcp, &addrlen_tcp)) == -1) printError("main: accept()");
                 fd_array = (tcp_client*)realloc(fd_array, sizeof(struct tcp_client) * (numClients + 1));
-                printf("%d\n", numClients);
+                printf("%d\n", numClients); // DEBUG
             }
             else tcp_flag = 0;
             // userSession(fd_array[numClients - 1]);
