@@ -87,45 +87,50 @@ void endUser() {
     exit(0);
 }
 
+
+/*      === main code ===        */
+
 void fdManager() {
     char command[6], reply[10], acr[4], tid[5];
 
     int n, maxfdp1;
 
     while (1) {
-        //printf("Inside select\n");
         FD_ZERO(&rset);
-        //printf("Inside select 1\n");
         FD_SET(STDIN, &rset);
-        //printf("Inside select 2\n");
         FD_SET(fd, &rset);
-        //printf("Inside select 3\n");
 
         maxfdp1 = MAX(STDIN, fd) + 1;
-        //printf("Inside select 4\n");
 
         n = select(maxfdp1, &rset, NULL, NULL, NULL);
         if (n == -1) errorExit("select()");
 
-        //printf("Inside select 5\n");
+        if (FD_ISSET(STDIN, &rset)) {
+            scanf("%s", command);
+            if (!strcmp(command, "login")) {
+                scanf("%s %s", uid, pass);
+                login();
+            } else if (!strcmp(command, "req")) {
+                scanf("%c", &op);
+                requestFile();
+            } else if (!strcmp(command, "val")) {
+                scanf("%s", vc);
+                validateCode();
+            } else
+                printf("Error: invalid command\n");
+        }
 
         if (FD_ISSET(fd, &rset)) {
-            //printf("hey\n");
             n = read(fd, reply, 10);
-            //printf("%d\n", n); //DEBUG
             if (n == -1)
                 errorExit("read()");
             else if (n == 0) {
-                printf("AS closed\n");
+                printf("Error: AS closed\n");
                 endUser();
             }
             reply[n] = '\0';
 
-            //printf("server reply: %s", reply); /* DEBUG */ // TODO remove this
-
             sscanf(reply, "%s %s", acr, tid);
-            //printf("%s %s\n", acr, tid);
-            //acr[3] = '\0';
             tid[4] = '\0';
 
             if (!strcmp(reply, "RLO OK\n"))
@@ -144,23 +149,7 @@ void fdManager() {
             }
         }
 
-        if (FD_ISSET(STDIN, &rset)) {
-            scanf("%s", command);
-            printf("%s\n", command);
-            if (!strcmp(command, "login")) {
-                scanf("%s %s", uid, pass);
-                printf("%s %s\n", uid, pass);
-                login();
-                printf("after login duh\n");
-            } else if (!strcmp(command, "req")) {
-                scanf("%c", &op);
-                requestFile();
-            } else if (!strcmp(command, "val")) {
-                scanf("%s", vc);
-                validateCode();
-            } else
-                printf("ERR\n"); /* debug */ // TODO remove this
-        }
+        
     }
 }
 
@@ -177,19 +166,14 @@ int main(int argc, char *argv[]) {
     strcpy(fsip, FSIP);
     strcpy(fsport, FSPORT);
 
-    //printf("%s\n", asip); //DEBUG
-    //printf("%s\n", asport); //DEBUG
-
     for (i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "-h")) {
             printf("​Usage: %s [-n ASIP] [-p ASport] [-m FSIP] [-q FSport]\n", argv[0]);
             exit(0);
         } else if (!strcmp(argv[i], "-n")) {
             strcpy(asip, argv[++i]);
-            //printf("%s\n", asip); //DEBUG
         } else if (!strcmp(argv[i], "-p")) {
             strcpy(asport, argv[++i]);
-            //printf("%s\n", asport); //DEBUG
         } else if (!strcmp(argv[i], "-m")) {
             strcpy(fsip, argv[++i]);
         } else if (!strcmp(argv[i], "-q")) {
