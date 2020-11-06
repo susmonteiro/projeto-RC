@@ -88,6 +88,7 @@ void requestFile() {
 }
 
 void validateCode() {
+    // val VC
     int n;
     char message[64];
 
@@ -97,11 +98,31 @@ void validateCode() {
     if (n == -1) errorExit("write()");
 }
 
+void listFiles() {
+    return;
+}
+
+void retrieveFile() {
+    return;
+}
+
+void uploadFile() {
+    return;
+}
+
+void deleteFile() {
+    return;
+}
+
+void removeUser() {
+    return;
+}
+
 
 /*      === main code ===        */
 
 void fdManager() {
-    char command[6], reply[10], acr[4], tid[5];
+    char command[6], reply[10], acr[4], tid[5], filename[128];
 
     int n, maxfdp1;
 
@@ -126,6 +147,19 @@ void fdManager() {
             } else if (!strcmp(command, "val")) {
                 scanf("%s", vc);
                 validateCode();
+            } else if ((!strcmp(command, "list")) || (!strcmp(command, "l"))) {
+                listFiles();
+            } else if ((!strcmp(command, "retrieve")) || (!strcmp(command, "r"))) {
+                scanf("%s", filename);
+                retrieveFile();
+            } else if ((!strcmp(command, "upload")) || (!strcmp(command, "u"))) {
+                scanf("%s", filename);
+                uploadFile();
+            } else if ((!strcmp(command, "delete")) || (!strcmp(command, "d"))) {
+                scanf("%s", filename);
+                deleteFile();
+            } else if ((!strcmp(command, "remove")) || (!strcmp(command, "x"))) {
+                removeUser();
             } else if (!strcmp(command, "exit")) {
                 endUser();
             } else
