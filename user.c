@@ -18,13 +18,16 @@
 #define MAXARGS 10
 #define MINARGS 1
 
+#define CONNECTION_ON 1
+#define CONNECTION_OFF 0
+
 #define MAX(a, b) a *(a > b) + b *(b >= a)
 
-time_t t;
+int fsConnected = CONNECTION_OFF;
 
 int fd_as, fd_fs;
 fd_set rset;
-struct addrinfo hints_as, *res_as, hints_fs, *res_fs;
+struct addrinfo *res_as, *res_fs;
 
 char fsip[32], fsport[8], asip[32], asport[8];
 char uid[7], pass[10], vc[4], rid[5], file[32], tid[5];
@@ -40,6 +43,7 @@ void closeASconnection() {
 void closeFSconnection() {
     freeaddrinfo(res_fs);
     close(fd_fs);
+    fsConnected = CONNECTION_OFF;
 }
 
 void closeConnections() {
@@ -110,132 +114,68 @@ void validateCode() {
 void listFiles() {
     // list or l
     int n;
-    char message[64], buffer[128];
+    char message[64];
 
     tcpConnect(fsip, fsport, &fd_fs, &res_fs);
+    fsConnected = CONNECTION_ON;
+
     sprintf(message, "LST %s %s\n", uid, tid);
     n = write(fd_fs, message, strlen(message));
     if (n == -1) errorExit("write()");
-    do {
-        n = read(fd_fs, buffer, 128);
-        if (n == -1)
-            errorExit("read()");
-        else if (n == 0) {
-            printf("Error: FS closed\n");
-            closeConnections();
-        }
-        printf("%s", buffer);
-    } while (n == 128 && buffer[127] != '\n');
-    closeFSconnection();
 }
 
 void retrieveFile(char *filename) {
     //retrieve filename or r filename
     int n;
-    char message[128], buffer[128];
+    char message[128];
 
     tcpConnect(fsip, fsport, &fd_fs, &res_fs);
+    fsConnected = CONNECTION_ON;
     sprintf(message, "RTV %s %s %s\n", uid, tid, filename);
     n = write(fd_fs, message, strlen(message));
     if (n == -1) errorExit("write()");
-    do {
-        n = read(fd_fs, buffer, 128);
-        if (n == -1)
-            errorExit("read()");
-        else if (n == 0) {
-            printf("Error: FS closed\n");
-            closeConnections();
-        }
-        printf("%s", buffer);
-    } while (n == 128 && buffer[127] != '\n');
-    closeFSconnection();
 }
 
 void uploadFile(char *filename) {
     // upload filename or u filename
     int n;
-    char message[128], buffer[128];
+    char message[128];
 
     tcpConnect(fsip, fsport, &fd_fs, &res_fs);
+    fsConnected = CONNECTION_ON;
     sprintf(message, "UPL %s %s %s Fsize Data\n", uid, tid, filename); // TODO
     n = write(fd_fs, message, strlen(message));
     if (n == -1) errorExit("write()");
-    do {
-        n = read(fd_fs, buffer, 128);
-        if (n == -1)
-            errorExit("read()");
-        else if (n == 0) {
-            printf("Error: FS closed\n");
-            closeConnections();
-        }
-        printf("%s", buffer);
-    } while (n == 128 && buffer[127] != '\n');
-    closeFSconnection();
 }
 
 void deleteFile(char *filename) {
     // delete filename or d filename
     int n;
-    char message[128], buffer[32];
+    char message[128];
 
     tcpConnect(fsip, fsport, &fd_fs, &res_fs);
+    fsConnected = CONNECTION_ON;
     sprintf(message, "DEL %s %s %s\n", uid, tid, filename);
     n = write(fd_fs, message, strlen(message));
     if (n == -1) errorExit("write()");
-
-    n = read(fd_fs, buffer, 128);
-    if (n == -1)
-        errorExit("read()");
-    else if (n == 0) {
-        printf("Error: FS closed\n");
-        closeConnections();
-    }
-
-    if (!strcmp(buffer, "RRM OK\n")) {
-        printf("User successfully remove\n");
-    } else if (!strcmp(buffer, "RDL NOK\n")) {
-        printf("Error: could not remove user\n");
-    } else {
-        printf("Error: unexpected answer from FS\n");
-        closeConnections();
-    }
-    closeFSconnection();
 }
 
 void removeUser() {
     // remove or x
     int n;
-    char message[128], buffer[32];
+    char message[128];
 
     tcpConnect(fsip, fsport, &fd_fs, &res_fs);
+    fsConnected = CONNECTION_ON;
     sprintf(message, "REM %s %s\n", uid, tid);
     n = write(fd_fs, message, strlen(message));
     if (n == -1) errorExit("write()");
-
-    n = read(fd_fs, buffer, 128);
-    if (n == -1)
-        errorExit("read()");
-    else if (n == 0) {
-        printf("Error: FS closed\n");
-        closeConnections();
-    }
-
-    if (!strcmp(buffer, "RDL OK\n")) {
-        printf("File successfully deleted\n");
-    } else if (!strcmp(buffer, "RDL NOK\n")) {
-        printf("Error: could not delete file\n");
-    } else {
-        printf("Error: unexpected answer from FS\n");
-        closeConnections();
-    }
-    closeConnections();
-    return;
 }
 
 /*      === main code ===        */
 
 void fdManager() {
-    char command[6], reply[10], acr[4], filename[128];
+    char command[6], reply[128], acr[4], filename[128];
 
     int n, maxfdp1;
 
@@ -243,8 +183,13 @@ void fdManager() {
         FD_ZERO(&rset);
         FD_SET(STDIN, &rset);
         FD_SET(fd_as, &rset);
+        if (fsConnected) {
+            FD_SET(fd_fs, &rset);
+            printf("set in select\n");
+        }
 
         maxfdp1 = MAX(STDIN, fd_as) + 1;
+        if (fsConnected) maxfdp1 = MAX(maxfdp1, fd_fs) + 1;
 
         n = select(maxfdp1, &rset, NULL, NULL, NULL);
         if (n == -1) errorExit("select()");
@@ -280,7 +225,7 @@ void fdManager() {
         }
 
         if (FD_ISSET(fd_as, &rset)) {
-            n = read(fd_as, reply, 10);
+            n = read(fd_as, reply, 128);
             if (n == -1)
                 errorExit("read()");
             else if (n == 0) {
@@ -306,6 +251,61 @@ void fdManager() {
                 printf("Error: unexpected answer from AS\n");
                 closeConnections();
             }
+        }
+
+        if (FD_ISSET(fd_fs, &rset)) {
+            char typeMsg[8];
+            n = read(fd_fs, typeMsg, 7);
+            if (n == -1)
+                errorExit("read()");
+            else if (n == 0) {
+                printf("Error: FS closed\n");
+                closeConnections();
+            }
+
+            if (!strcmp(typeMsg, "RLS OK ")) {
+                do {
+                    n = read(fd_fs, reply, 128);
+                    if (n == -1)
+                        errorExit("read()");
+                    else if (n == 0) {
+                        printf("Error: FS closed\n");
+                        closeConnections();
+                    }
+                    printf("%s", reply);
+                } while (n == 128 && reply[127] != '\n');
+            } else if (!strcmp(typeMsg, "RLS NOK")) {
+                printf("Error: could not list files\n");
+            } else if (!strcmp(typeMsg, "RRT OK ")) {
+                do {
+                    n = read(fd_fs, reply, 128);
+                    if (n == -1)
+                        errorExit("read()");
+                    else if (n == 0) {
+                        printf("Error: FS closed\n");
+                        closeConnections();
+                    }
+                    printf("%s", reply);
+                } while (n == 128 && reply[127] != '\n');
+            } else if (!strcmp(typeMsg, "RRT NOK")) {
+                printf("Error: could not retrieve file\n");
+            } else if (!strcmp(typeMsg, "RUP OK ")) {
+                printf("Upload successful");
+            } else if (!strcmp(typeMsg, "RUP NOK")) {
+                printf("Error: could not upload file\n");
+            } else if (!strcmp(typeMsg, "RDL OK ")) {
+                printf("File deleted successfully\n");
+            } else if (!strcmp(typeMsg, "RDL NOK")) {
+                printf("Error: could not delete file\n");
+            } else if (!strcmp(typeMsg, "RRM OK ")) {
+                printf("User removed successfully\n");
+            } else if (!strcmp(typeMsg, "RRM NOK")) {
+                printf("Error: could not remove user");
+            } else {
+                printf("Error: unexpected answer from FS\n");
+                closeConnections();
+            }
+            closeFSconnection();
         }
     }
 }
@@ -339,7 +339,6 @@ int main(int argc, char *argv[]) {
     }
 
     tcpConnect(asip, asport, &fd_as, &res_as);
-    tcpConnect(fsip, fsport, &fd_fs, &res_fs);
     sprintf(rid, "%d", rand() % 9999);
 
     signal(SIGINT, closeConnections);
