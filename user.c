@@ -24,7 +24,9 @@ time_t t;
 
 int fd_as, fd_fs;
 fd_set rset;
-struct addrinfo *res_as, *res_fs;
+struct addrinfo hints_as, *res_as, hints_fs, *res_fs;
+socklen_t addrlen_as, addrlen_fs;
+struct sockaddr_in addr_as, addr_fs;
 
 char fsip[32], fsport[8], asip[32], asport[8];
 char uid[7], pass[10], vc[4], rid[5], file[32], tid[5];
@@ -342,6 +344,7 @@ int main(int argc, char *argv[]) {
     }
 
     tcpConnect(asip, asport, &fd_as, &res_as);
+    tcpConnect(fsip, fsport, &fd_fs, &res_fs);
     sprintf(rid, "%d", rand() % 9999);
 
     signal(SIGINT, closeConnections);
