@@ -22,11 +22,9 @@
 
 time_t t;
 
-int fd;
+int fd_as, fd_fs;
 fd_set rset;
-struct addrinfo hints, *res;
-socklen_t addrlen;
-struct sockaddr_in addr;
+struct addrinfo *res_as, *res_fs;
 
 char fsip[32], fsport[8], asip[32], asport[8];
 char uid[7], pass[10], vc[4], rid[5], file[32];
@@ -36,9 +34,14 @@ char op;
 /*      === end User ===       */
 
 void endUser() {
-    freeaddrinfo(res);
-    close(fd);
+    freeaddrinfo(res_as);
+    close(fd_as);
     exit(0);
+}
+
+void closeFSconnection() {
+    freeaddrinfo(res_fs);
+    close(fd_fs);
 }
 
 
@@ -50,7 +53,7 @@ void login() {
     char message[64];
     sprintf(message, "LOG %s %s\n", uid, pass);
     //printf("our message: %s", message);   //DEBUG
-    n = write(fd, message, strlen(message));
+    n = write(fd_as, message, strlen(message));
     if (n == -1) errorExit("write()");
 }
 
@@ -81,9 +84,12 @@ void requestFile() {
     case 'X':
         sprintf(message, "REQ %s %s %c\n", uid, rid, op);
         break;
+    default:
+        printf("Error: wrong command");
+        return;
     }
     //printf("our message: %s\n", message); //DEBUG
-    n = write(fd, message, strlen(message));
+    n = write(fd_as, message, strlen(message));
     if (n == -1) errorExit("write()");
 }
 
@@ -94,15 +100,23 @@ void validateCode() {
 
     sprintf(message, "AUT %s %s %s\n", uid, rid, vc);
     //printf("%s\n", message); //DEBUG
-    n = write(fd, message, strlen(message));
+    n = write(fd_as, message, strlen(message));
     if (n == -1) errorExit("write()");
 }
 
 void listFiles() {
-    return;
+    // list or l
+    int n;
+    char message[64];
+
+    tcpConnect(fsip, fsport, &fd_fs, &res_fs);
+    sprintf(message, "LST %s %s\n", uid, tid);
+    n = write(fd_as, message, strlen(message));
+    if (n == -1) errorExit("write()");
 }
 
 void retrieveFile() {
+    //retrieve filename or r filename
     return;
 }
 
@@ -129,9 +143,9 @@ void fdManager() {
     while (1) {
         FD_ZERO(&rset);
         FD_SET(STDIN, &rset);
-        FD_SET(fd, &rset);
+        FD_SET(fd_as, &rset);
 
-        maxfdp1 = MAX(STDIN, fd) + 1;
+        maxfdp1 = MAX(STDIN, fd_as) + 1;
 
         n = select(maxfdp1, &rset, NULL, NULL, NULL);
         if (n == -1) errorExit("select()");
@@ -166,8 +180,8 @@ void fdManager() {
                 printf("Error: invalid command\n");
         }
 
-        if (FD_ISSET(fd, &rset)) {
-            n = read(fd, reply, 10);
+        if (FD_ISSET(fd_as, &rset)) {
+            n = read(fd_as, reply, 10);
             if (n == -1)
                 errorExit("read()");
             else if (n == 0) {
@@ -225,7 +239,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    tcpConnect(asip, asport, &fd, &res);
+    tcpConnect(asip, asport, &fd_as, &res_as);
     sprintf(rid, "%d", rand() % 9999);
 
     signal(SIGINT, endUser);
