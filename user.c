@@ -41,6 +41,11 @@ void endUser() {
     exit(0);
 }
 
+void closeFSconnection() {
+    freeaddrinfo(res_fs);
+    close(fd_fs);
+}
+
 
 /*      === command functions ===        */
 
@@ -81,6 +86,9 @@ void requestFile() {
     case 'X':
         sprintf(message, "REQ %s %s %c\n", uid, rid, op);
         break;
+    default:
+        printf("Error: wrong command");
+        return;
     }
     //printf("our message: %s\n", message); //DEBUG
     n = write(fd_as, message, strlen(message));
@@ -99,10 +107,18 @@ void validateCode() {
 }
 
 void listFiles() {
-    return;
+    // list or l
+    int n;
+    char message[64];
+
+    tcpConnect(fsip, fsport, &fd_fs, &res_fs);
+    sprintf(message, "LST %s %s\n", uid, tid);
+    n = write(fd_as, message, strlen(message));
+    if (n == -1) errorExit("write()");
 }
 
 void retrieveFile() {
+    //retrieve filename or r filename
     return;
 }
 
@@ -130,9 +146,8 @@ void fdManager() {
         FD_ZERO(&rset);
         FD_SET(STDIN, &rset);
         FD_SET(fd_as, &rset);
-        FD_SET(fd_fs, &rset);
 
-        maxfdp1 = MAX(MAX(fd_fs, fd_as), STDIN)  + 1;
+        maxfdp1 = MAX(STDIN, fd_as) + 1;
 
         n = select(maxfdp1, &rset, NULL, NULL, NULL);
         if (n == -1) errorExit("select()");
