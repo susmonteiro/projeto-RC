@@ -61,7 +61,6 @@ char pdip[32], pdport[8], asip[32], asport[8];
 char command[6], uid[7], pass[10], buffer[32];
 int maxfdp1;
 
-
 /*      === resend messages that were not acknowledge ===       */
 
 void resetLastMessage() {
@@ -217,22 +216,21 @@ void fdManager() {
             if (n == -1) errorExit("recvfrom()");
             reply[n] = '\0';
 
-
             if (!strcmp(reply, "RRG OK\n") && typeMessage == TYPE_REG) {
                 resetLastMessage();
                 printf("Registration successful\n");
             } else if (!strcmp(reply, "RRG NOK\n") && typeMessage == TYPE_REG) {
                 resetLastMessage();
-                printf("Error: already registered\n");
+                printf("Error: Registration unsuccessful\n");
             } else if (!strcmp(reply, "RUN OK\n") && typeMessage == TYPE_END) {
                 resetLastMessage();
                 printf("Unregistration successful\n");
                 freePD();
             } else if (!strcmp(reply, "RUN NOK\n") && typeMessage == TYPE_END) {
                 resetLastMessage();
-                printf("Error: unregistration unsuccessful\n");
+                printf("Error: Unregistration unsuccessful\n");
             } else {
-                printf("Error: unexpected answer from AS\n");
+                printf("Error: Unexpected answer from AS\n");
                 exitPD();
             }
         }
