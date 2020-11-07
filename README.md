@@ -311,6 +311,7 @@ Request and reply messages:
 - verificar que os ficheiros estao sempre a terminar como deve de ser e que os servidores nunca morrem quando recebem algo inválido [**Susana**]
 - resend de mensagens no AS (e no FS) [**Susana**]
 - informar no terminal do PD quando morre de aborrecimento
+- um user pode ter que estabelecer várias ligações tcp com um fs ao mesmo tempo?
 
 - PD
 - AS -> guardar registos em ficheiros, numa pasta
