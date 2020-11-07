@@ -310,6 +310,7 @@ Request and reply messages:
 ## TODO:
 - verificar que os ficheiros estao sempre a terminar como deve de ser e que os servidores nunca morrem quando recebem algo inválido [**Susana**]
 - resend de mensagens no AS (e no FS) [**Susana**]
+- informar no terminal do PD quando morre de aborrecimento
 
 - PD
 - AS -> guardar registos em ficheiros, numa pasta
