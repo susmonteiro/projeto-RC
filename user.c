@@ -27,7 +27,7 @@ fd_set rset;
 struct addrinfo *res_as, *res_fs;
 
 char fsip[32], fsport[8], asip[32], asport[8];
-char uid[7], pass[10], vc[4], rid[5], file[32];
+char uid[7], pass[10], vc[4], rid[5], file[32], tid[5];
 char op;
 
 
@@ -136,7 +136,7 @@ void removeUser() {
 /*      === main code ===        */
 
 void fdManager() {
-    char command[6], reply[10], acr[4], tid[5], filename[128];
+    char command[6], reply[10], acr[4], filename[128];
 
     int n, maxfdp1;
 
