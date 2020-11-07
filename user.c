@@ -25,13 +25,10 @@ time_t t;
 int fd_as, fd_fs;
 fd_set rset;
 struct addrinfo hints_as, *res_as, hints_fs, *res_fs;
-socklen_t addrlen_as, addrlen_fs;
-struct sockaddr_in addr_as, addr_fs;
 
 char fsip[32], fsport[8], asip[32], asport[8];
 char uid[7], pass[10], vc[4], rid[5], file[32], tid[5];
 char op;
-
 
 /*      === end User ===       */
 
@@ -50,7 +47,6 @@ void closeConnections() {
     closeFSconnection();
     exit(0);
 }
-
 
 /*      === command functions ===        */
 
@@ -133,7 +129,7 @@ void listFiles() {
     closeFSconnection();
 }
 
-void retrieveFile(char* filename) {
+void retrieveFile(char *filename) {
     //retrieve filename or r filename
     int n;
     char message[128], buffer[128];
@@ -155,7 +151,7 @@ void retrieveFile(char* filename) {
     closeFSconnection();
 }
 
-void uploadFile(char* filename) {
+void uploadFile(char *filename) {
     // upload filename or u filename
     int n;
     char message[128], buffer[128];
@@ -177,16 +173,16 @@ void uploadFile(char* filename) {
     closeFSconnection();
 }
 
-void deleteFile(char* filename) {
+void deleteFile(char *filename) {
     // delete filename or d filename
     int n;
     char message[128], buffer[32];
 
     tcpConnect(fsip, fsport, &fd_fs, &res_fs);
-    sprintf(message, "DEL %s %s %s\n", uid, tid, filename); 
+    sprintf(message, "DEL %s %s %s\n", uid, tid, filename);
     n = write(fd_fs, message, strlen(message));
     if (n == -1) errorExit("write()");
-    
+
     n = read(fd_fs, buffer, 128);
     if (n == -1)
         errorExit("read()");
@@ -212,10 +208,10 @@ void removeUser() {
     char message[128], buffer[32];
 
     tcpConnect(fsip, fsport, &fd_fs, &res_fs);
-    sprintf(message, "REM %s %s\n", uid, tid); 
+    sprintf(message, "REM %s %s\n", uid, tid);
     n = write(fd_fs, message, strlen(message));
     if (n == -1) errorExit("write()");
-    
+
     n = read(fd_fs, buffer, 128);
     if (n == -1)
         errorExit("read()");
@@ -235,7 +231,6 @@ void removeUser() {
     closeConnections();
     return;
 }
-
 
 /*      === main code ===        */
 
