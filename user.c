@@ -175,7 +175,7 @@ void removeUser() {
 /*      === main code ===        */
 
 void fdManager() {
-    char command[6], reply[128], acr[4], filename[128];
+    char command[6], reply[128], acr[4], filename[32];
 
     int n, maxfdp1;
 
@@ -196,6 +196,7 @@ void fdManager() {
 
         if (FD_ISSET(STDIN, &rset)) {
             scanf("%s", command);
+            printf("command: %s\n", command); // DEBUG
             if (!strcmp(command, "login")) {
                 scanf("%s %s", uid, pass);
                 login();
@@ -207,6 +208,7 @@ void fdManager() {
                 validateCode();
             } else if ((!strcmp(command, "list")) || (!strcmp(command, "l"))) {
                 listFiles();
+                printf("list sent\n"); // DEBUG
             } else if ((!strcmp(command, "retrieve")) || (!strcmp(command, "r"))) {
                 scanf("%s", filename);
                 retrieveFile(filename);
@@ -238,7 +240,7 @@ void fdManager() {
             tid[4] = '\0';
 
             if (!strcmp(reply, "RLO OK\n"))
-                printf("You are now logged in.\n");
+                printf("You are now logged in\n");
             else if (!strcmp(reply, "RLO NOK\n"))
                 printf("Error: login unsuccessful\n");
             else if (!strcmp(reply, "RRQ OK\n"))
@@ -258,61 +260,63 @@ void fdManager() {
                 closeConnections();
             }
         }
-        if (fsConnected) {
-            if (FD_ISSET(fd_fs, &rset)) {
-                char typeMsg[8];
-                n = read(fd_fs, typeMsg, 7);
-                if (n == -1)
-                    errorExit("read()");
-                else if (n == 0) {
-                    printf("Error: FS closed\n");
-                    closeConnections();
-                }
-
-                if (!strcmp(typeMsg, "RLS OK ")) {
-                    do {
-                        n = read(fd_fs, reply, 128);
-                        if (n == -1)
-                            errorExit("read()");
-                        else if (n == 0) {
-                            printf("Error: FS closed\n");
-                            closeConnections();
-                        }
-                        printf("%s", reply);
-                    } while (n == 128 && reply[127] != '\n');
-                } else if (!strcmp(typeMsg, "RLS NOK")) {
-                    printf("Error: could not list files\n");
-                } else if (!strcmp(typeMsg, "RRT OK ")) {
-                    do {
-                        n = read(fd_fs, reply, 128);
-                        if (n == -1)
-                            errorExit("read()");
-                        else if (n == 0) {
-                            printf("Error: FS closed\n");
-                            closeConnections();
-                        }
-                        printf("%s", reply);
-                    } while (n == 128 && reply[127] != '\n');
-                } else if (!strcmp(typeMsg, "RRT NOK")) {
-                    printf("Error: could not retrieve file\n");
-                } else if (!strcmp(typeMsg, "RUP OK ")) {
-                    printf("Upload successful");
-                } else if (!strcmp(typeMsg, "RUP NOK")) {
-                    printf("Error: could not upload file\n");
-                } else if (!strcmp(typeMsg, "RDL OK ")) {
-                    printf("File deleted successfully\n");
-                } else if (!strcmp(typeMsg, "RDL NOK")) {
-                    printf("Error: could not delete file\n");
-                } else if (!strcmp(typeMsg, "RRM OK ")) {
-                    printf("User removed successfully\n");
-                } else if (!strcmp(typeMsg, "RRM NOK")) {
-                    printf("Error: could not remove user");
-                } else {
-                    printf("Error: unexpected answer from FS\n");
-                    closeConnections();
-                }
-                closeFSconnection();
+        if (fsConnected == CONNECTION_OFF) continue;
+        if (FD_ISSET(fd_fs, &rset)) {
+            printf("inside fs select\n"); // DEBUG
+            char typeMsg[8];
+            n = read(fd_fs, typeMsg, 7);
+            if (n == -1)
+                errorExit("read()");
+            else if (n == 0) {
+                printf("Error: FS closed\n");
+                closeConnections();
             }
+
+            printf("received message: %s\n", typeMsg); // DEBUG
+
+            if (!strcmp(typeMsg, "RLS OK ")) {
+                do {
+                    n = read(fd_fs, reply, 128);
+                    if (n == -1)
+                        errorExit("read()");
+                    else if (n == 0) {
+                        printf("Error: FS closed\n");
+                        closeConnections();
+                    }
+                    printf("%s", reply);
+                } while (n == 128 && reply[127] != '\n');
+            } else if (!strcmp(typeMsg, "RLS NOK")) {
+                printf("Error: could not list files\n");
+            } else if (!strcmp(typeMsg, "RRT OK ")) {
+                do {
+                    n = read(fd_fs, reply, 128);
+                    if (n == -1)
+                        errorExit("read()");
+                    else if (n == 0) {
+                        printf("Error: FS closed\n");
+                        closeConnections();
+                    }
+                    printf("%s", reply);
+                } while (n == 128 && reply[127] != '\n');
+            } else if (!strcmp(typeMsg, "RRT NOK")) {
+                printf("Error: could not retrieve file\n");
+            } else if (!strcmp(typeMsg, "RUP OK ")) {
+                printf("Upload successful");
+            } else if (!strcmp(typeMsg, "RUP NOK")) {
+                printf("Error: could not upload file\n");
+            } else if (!strcmp(typeMsg, "RDL OK ")) {
+                printf("File deleted successfully\n");
+            } else if (!strcmp(typeMsg, "RDL NOK")) {
+                printf("Error: could not delete file\n");
+            } else if (!strcmp(typeMsg, "RRM OK ")) {
+                printf("User removed successfully\n");
+            } else if (!strcmp(typeMsg, "RRM NOK")) {
+                printf("Error: could not remove user");
+            } else {
+                printf("Error: unexpected answer from FS\n");
+                closeConnections();
+            }
+            closeFSconnection();
         }
     }
 }
