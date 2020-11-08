@@ -124,6 +124,54 @@ void listFiles() {
     if (n == -1) errorExit("write()");
 }
 
+void readUntilSpace(char *buffer) {
+    char c;
+    int i = 0, n = 0;
+    do {
+        n = read(fd_fs, &c, 1);
+        if (n == -1)
+            errorExit("read()");
+        else if (n == 0) {
+            printf("Error: FS closed\n");
+            closeConnections();
+        }
+        buffer[i++] = c;
+    } while (c != ' ' && c != '\n');
+    buffer[--i] = '\0';
+}
+
+void listFilesReply() {
+    char status[64], filename[32], fsize[32];
+    int i = 0, numFiles;
+
+    readUntilSpace(status);
+    printf("status read: %s\n", status); // DEBUG
+
+    if (!strcmp(status, "EOF")) {
+        printf("There are no files to list\n");
+        return;
+    } else if (!strcmp(status, "INV")) {
+        printf("Error: tid is invalid\n");
+        return;
+    } else if (!strcmp(status, "ERR")) {
+        printf("Error: bad request");
+        closeConnections();
+    } else {
+        numFiles = atoi(status);
+        if (numFiles == 0) {
+            printf("Error: unexpected message from FS\n");
+            closeConnections();
+        }
+        printf("numFiles=%d\n", numFiles); // DEBUG
+    }
+
+    for (i = 1; i <= numFiles; i++) {
+        readUntilSpace(filename);
+        readUntilSpace(fsize);
+        printf("%d)\t%24s\t%s\n", i, filename, fsize);
+    }
+}
+
 void retrieveFile(char *filename) {
     //retrieve filename or r filename
     int n;
@@ -266,60 +314,63 @@ void fdManager() {
         if (fsConnected == CONNECTION_OFF) continue;
         if (FD_ISSET(fd_fs, &rset)) {
             printf("inside fs select\n"); // DEBUG
-            char typeMsg[8];
-            n = read(fd_fs, typeMsg, 7);
+            char typeMsg[4];
+            n = read(fd_fs, typeMsg, 4); // read type + space
             if (n == -1)
                 errorExit("read()");
             else if (n == 0) {
                 printf("Error: FS closed\n");
                 closeConnections();
             }
+            typeMsg[3] = '\0';
 
             printf("received message: %s\n", typeMsg); // DEBUG
 
-            if (!strcmp(typeMsg, "RLS OK ")) {
-                do {
-                    n = read(fd_fs, reply, 128);
-                    if (n == -1)
-                        errorExit("read()");
-                    else if (n == 0) {
-                        printf("Error: FS closed\n");
-                        closeConnections();
-                    }
-                    printf("%s", reply);
-                } while (n == 128 && reply[127] != '\n');
-            } else if (!strcmp(typeMsg, "RLS NOK")) {
-                printf("Error: could not list files\n");
-            } else if (!strcmp(typeMsg, "RRT OK ")) {
-                do {
-                    n = read(fd_fs, reply, 128);
-                    if (n == -1)
-                        errorExit("read()");
-                    else if (n == 0) {
-                        printf("Error: FS closed\n");
-                        closeConnections();
-                    }
-                    printf("%s", reply);
-                } while (n == 128 && reply[127] != '\n');
-            } else if (!strcmp(typeMsg, "RRT NOK")) {
-                printf("Error: could not retrieve file\n");
-            } else if (!strcmp(typeMsg, "RUP OK ")) {
-                printf("Upload successful");
-            } else if (!strcmp(typeMsg, "RUP NOK")) {
-                printf("Error: could not upload file\n");
-            } else if (!strcmp(typeMsg, "RDL OK ")) {
-                printf("File deleted successfully\n");
-            } else if (!strcmp(typeMsg, "RDL NOK")) {
-                printf("Error: could not delete file\n");
-            } else if (!strcmp(typeMsg, "RRM OK ")) {
-                printf("User removed successfully\n");
-            } else if (!strcmp(typeMsg, "RRM NOK")) {
-                printf("Error: could not remove user");
-            } else {
-                printf("Error: unexpected answer from FS\n");
-                closeConnections();
-            }
-            closeFSconnection();
+            if (!strcmp(typeMsg, "RLS")) listFilesReply();
+
+            // if (!strcmp(typeMsg, "RLS OK ")) {
+            //     do {
+            //         n = read(fd_fs, reply, 128);
+            //         if (n == -1)
+            //             errorExit("read()");
+            //         else if (n == 0) {
+            //             printf("Error: FS closed\n");
+            //             closeConnections();
+            //         }
+            //         printf("%s", reply);
+            //     } while (n == 128 && reply[127] != '\n');
+            // } else if (!strcmp(typeMsg, "RLS NOK")) {
+            //     printf("Error: could not list files\n");
+            // } else if (!strcmp(typeMsg, "RRT OK ")) {
+            //     do {
+            //         n = read(fd_fs, reply, 128);
+            //         if (n == -1)
+            //             errorExit("read()");
+            //         else if (n == 0) {
+            //             printf("Error: FS closed\n");
+            //             closeConnections();
+            //         }
+            //         printf("%s", reply);
+            //     } while (n == 128 && reply[127] != '\n');
+            // } else if (!strcmp(typeMsg, "RRT NOK")) {
+            //     printf("Error: could not retrieve file\n");
+            // } else if (!strcmp(typeMsg, "RUP OK ")) {
+            //     printf("Upload successful");
+            // } else if (!strcmp(typeMsg, "RUP NOK")) {
+            //     printf("Error: could not upload file\n");
+            // } else if (!strcmp(typeMsg, "RDL OK ")) {
+            //     printf("File deleted successfully\n");
+            // } else if (!strcmp(typeMsg, "RDL NOK")) {
+            //     printf("Error: could not delete file\n");
+            // } else if (!strcmp(typeMsg, "RRM OK ")) {
+            //     printf("User removed successfully\n");
+            // } else if (!strcmp(typeMsg, "RRM NOK")) {
+            //     printf("Error: could not remove user");
+            // } else {
+            //     printf("Error: unexpected answer from FS\n");
+            //     closeConnections();
+            // }
+            // closeFSconnection();
         }
     }
 }
