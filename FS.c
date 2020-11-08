@@ -84,7 +84,7 @@ char *delete (int fd, char *uid, char *fname) {
 char *retrieve(int fd, char *uid, char *fname) {
     // TODO RRT NOK, RTT INV
     int n, fsize;
-    char message[128], buffer[128], fd[6];
+    char message[128], buffer[128];
     FILE *file;
 
     if ((file = fopen(fname, "r")) == NULL) {
