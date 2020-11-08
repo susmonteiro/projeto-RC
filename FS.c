@@ -67,16 +67,15 @@ void endFS() {
 
 /*      === command functions ===        */
 
-char *list(char *uid, char *tid) {
+void listFiles(char *uid, char *tid) {
     // TO DO (Rodrigo)
     char message[128];
     sprintf(message, "list operation done for UID=%s", uid);
     printv(message);
-    return "RLS N[fname fsize]\n";
 }
 
-void delete (int fd, char *uid, char *fname) {
-    // TODO NOK, INV, ERR
+void deleteFile(int fd, char *uid, char *fname) {
+    // TODO NOK, ERR
     char message[128];
     int n;
 
@@ -92,7 +91,7 @@ void delete (int fd, char *uid, char *fname) {
     if (n == -1) errorExit("write()");
 }
 
-void retrieve(int fd, char *uid, char *fname) {
+void retrieveFile(int fd, char *uid, char *fname) {
     // TODO RRT NOK, RTT INV
     int n, fsize;
     char message[128], buffer[128];
@@ -124,7 +123,7 @@ void retrieve(int fd, char *uid, char *fname) {
     fclose(file);
 }
 
-void upload(int fd, char *uid, char *fname) {
+void uploadFile(int fd, char *uid, char *fname) {
     // TO DO (Rodrigo)
     char message[128];
     sprintf(message, "%s stored for UID=%s", fname, uid);
@@ -132,12 +131,11 @@ void upload(int fd, char *uid, char *fname) {
     //return "RUP status\n";
 }
 
-char *removeAll(char *uid, char *tid) {
+void removeAll(char *uid, char *tid) {
     // TO DO (Rodrigo)
     char message[128];
     sprintf(message, "operation remove done for UID=%s", uid);
     printv(message);
-    return "RRM status\n";
 }
 
 /*      === user manager ===        */
@@ -218,10 +216,34 @@ void userSession(int ind) {
     if (n == -1) printError("validateOperation: sendto()");
 }
 
+void sendInvReply(int fd, char fop) {
+    int n;
+    char reply[8];
+
+    switch (fop) {
+    case 'L':
+        strcpy(reply, "RLS INV");
+        break;
+    case 'R':
+        strcpy(reply, "RRT INV");
+        break;
+    case 'U':
+        strcpy(reply, "RUP INV");
+        break;
+    case 'D':
+        strcpy(reply, "RDL INV");
+        break;
+    default:
+        strcpy(reply, "ERR");
+    }
+    n = write(fd, reply, strlen(reply));
+    if (n == -1) printError("write()");
+}
+
 void doOperation(char *buffer) {
     char uid[7], tid[6], fname[32], reply[128], command[5];
     char fop;
-    int n, i, fd = 0;
+    int n, i, j, fd = 0;
     sscanf(buffer, "%s %s %s", command, uid, tid);
     if (!strcmp(command, "CNF")) {
         for (i = 0; i < numTransactions; i++) {
@@ -237,33 +259,41 @@ void doOperation(char *buffer) {
 
         // TODO pass transactions[i] to all following functions instead of current parameters
 
-        for (i = 0; i < numClients; i++) {
+        for (j = 0; j < numClients; j++) {
             if (!strcmp(users[i]->uid, uid)) {
-                fd = users[i]->fd;
+                fd = users[j]->fd;
+                break;
             }
+        }
+
+        if (j == numClients - 1) {
+            strcpy(reply, "ERR\n");
+            n = write(fd, reply, strlen(reply));
+            if (n == -1) printError("doOperation: write()");
+            return;
         }
 
         switch (fop) {
         case 'L':
-            strcpy(reply, list(uid, tid));
+            listFiles(uid, tid);
             break;
         case 'D':
             sscanf(buffer, "%s %s %c %s", uid, tid, &fop, fname);
-            delete (fd, uid, fname);
+            deleteFile(fd, uid, fname);
             break;
         case 'R':
             sscanf(buffer, "%s %s %c %s", uid, tid, &fop, fname);
-            retrieve(fd, uid, fname);
+            retrieveFile(fd, uid, fname);
             break;
         case 'U':
             sscanf(buffer, "%s %s %c %s", uid, tid, &fop, fname);
-            upload(fd, uid, fname);
+            uploadFile(fd, uid, fname);
             break;
         case 'X':
-            strcpy(reply, removeAll(uid, tid));
+            removeAll(uid, tid);
             break;
         case 'E':
-            strcpy(reply, "INV"); //TODO get acr
+            sendInvReply(fd, transactions[i]->fop[0]);
         }
         printv("operation validated");
     } else
@@ -276,7 +306,7 @@ void doOperation(char *buffer) {
 
 void fdManager() {
     char buffer[128];
-    int i, n, maxfdp1, tcp_flag;
+    int i, n, maxfdp1;
 
     while (1) {
         FD_ZERO(&rset);
