@@ -316,6 +316,7 @@ Request and reply messages:
 - retrieve file: guardar num ficheiro ou no terminal?
 - o user consegue enviar mais requests ao as antes de receber a confirmação do ultimo?
 - alínea d) do user-FS. Name and path displayed in user?
+- [**Rodrigo**] random rid no user
 
 - PD
 - AS -> guardar registos em ficheiros, numa pasta
