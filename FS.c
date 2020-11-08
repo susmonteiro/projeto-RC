@@ -71,16 +71,19 @@ void userSession(int ind) {
     }
 
     buffer[n] = '\0';
+
+    // DEBUG
     sprintf(msg, "message from User: %s", buffer);
     printv(msg);
+    //END OF DEBUG
+
     sscanf(buffer, "%s %s %s", command, arg1, arg2);
     strcpy(fd_array[ind].uid, arg1);
     fd_array[ind].uid[5] = '\0';
     if (!strcmp(command, "RTV") || !strcmp(command, "DEL")) {
         if (!strcmp(command, "RTV")) {
             strcpy(type, "retrieve");
-        }
-        else if (!strcmp(command, "DEL")) {
+        } else if (!strcmp(command, "DEL")) {
             strcpy(type, "delete");
         }
         sscanf(buffer, "%s %s %s %s", command, arg1, arg2, arg3);
@@ -101,33 +104,32 @@ void userSession(int ind) {
     if (n == -1) printError("validateOperation: sendto()");
 }
 
-char* list(char* uid, char* tid) {
+char *list(char *uid, char *tid) {
     // TO DO (Rodrigo)
     return "RLS N[fname fsize]\n";
 }
 
-char* delete(char* uid, char* tid, char* fname) {
+char *delete (char *uid, char *tid, char *fname) {
     // TO DO (Rodrigo)
     return "RDL status\n";
 }
 
-char* retrieve(char* uid, char* tid, char* fname) {
+char *retrieve(char *uid, char *tid, char *fname) {
     // TO DO (Rodrigo)
     return "RTT status [Fsize data]\n";
 }
 
-char* upload(char* uid, char* tid, char* fname) {
+char *upload(char *uid, char *tid, char *fname) {
     // TO DO (Rodrigo)
     return "RUP status\n";
 }
 
-char* removeAll(char* uid, char* tid) {
+char *removeAll(char *uid, char *tid) {
     // TO DO (Rodrigo)
     return "RRM status\n";
 }
 
-
-void doOperation(char* buffer) {
+void doOperation(char *buffer) {
     char uid[7], tid[6], fname[32], reply[128], command[5];
     char fop;
     int n, i, fd = 0;
@@ -140,70 +142,38 @@ void doOperation(char* buffer) {
                 fd = fd_array[i].fd;
             }
         }
-        switch(fop) {
-            case 'L':
-                strcpy(reply, list(uid, tid));
-                break;
-            case 'D':
-                sscanf(buffer, "%s %s %c %s", uid, tid, &fop, fname);
-                strcpy(reply, delete(uid, tid, fname));
-                break;
-            case 'R':
-                sscanf(buffer, "%s %s %c %s", uid, tid, &fop, fname);
-                strcpy(reply, retrieve(uid, tid, fname));
-                break;
-            case 'U':
-                sscanf(buffer, "%s %s %c %s", uid, tid, &fop, fname);
-                strcpy(reply, upload(uid, tid, fname));
-                break;
-            case 'X':
-                strcpy(reply, removeAll(uid, tid));
-                break;
+        switch (fop) {
+        case 'L':
+            strcpy(reply, list(uid, tid));
+            break;
+        case 'D':
+            sscanf(buffer, "%s %s %c %s", uid, tid, &fop, fname);
+            strcpy(reply, delete (uid, tid, fname));
+            break;
+        case 'R':
+            sscanf(buffer, "%s %s %c %s", uid, tid, &fop, fname);
+            strcpy(reply, retrieve(uid, tid, fname));
+            break;
+        case 'U':
+            sscanf(buffer, "%s %s %c %s", uid, tid, &fop, fname);
+            strcpy(reply, upload(uid, tid, fname));
+            break;
+        case 'X':
+            strcpy(reply, removeAll(uid, tid));
+            break;
         }
         printf("operation validated\n");
-    } else strcpy(reply, "ERR\n");
-    n = write(fd, reply, strlen(reply));    
+    } else
+        strcpy(reply, "ERR\n");
+    n = write(fd, reply, strlen(reply));
     if (n == -1) printError("doOperation: write()");
 }
- 
-int main(int argc, char *argv[]) {
+
+/*      === main code ===        */
+
+void fdManager() {
     char buffer[128];
-    int i, n, maxfdp1, tcp_flag = 0;
-
-    if (argc < MINARGS || argc > MAXARGS) {
-        printf("Usage: %s [-q FSport] [-n ASIP] [-p ASport] [-v]\n", argv[0]);
-        printError("incorrect number of arguments");
-    }
-    strcpy(fsport, FSPORT);
-    strcpy(asport, ASPORT);
-    strcpy(asip, ASIP);
-
-    for (i = MINARGS; i < argc; i++) {
-        if (!strcmp(argv[i], "-v")) {
-            verbose = TRUE; // TODO move to common file
-        } else if (!strcmp(argv[i], "-q")) {
-            strcpy(fsport, argv[++i]);
-        } else if (!strcmp(argv[i], "-p")) {
-            strcpy(asport, argv[++i]);
-        } else if (!strcmp(argv[i], "-n")) {
-            strcpy(asip, argv[++i]);
-        } else if (!strcmp(argv[i], "-h")) {
-            printf("Usage: %s [-q FSport] [-n ASIP] [-p ASport] [-v]\n", argv[0]);
-            exit(0);
-        }
-    }
-
-    udpConnect(asip, asport, &fd_udp, &res_udp);
-
-    printv("udp connection with AS established");
-
-    tcpOpenConnection(FSPORT, &fd_tcp, &res_tcp);
-    if(listen(fd_tcp, 5) == -1) printError("TCP: listen()");
-    fd_array = (tcp_client *)malloc(sizeof(struct tcp_client));
-
-    printv("tcp connection open");
-
-    signal(SIGINT, endFS);
+    int i, n, maxfdp1, tcp_flag;
 
     while (1) {
         FD_ZERO(&rset);
@@ -223,7 +193,7 @@ int main(int argc, char *argv[]) {
 
         select(maxfdp1, &rset, NULL, NULL, NULL);
 
-        if (FD_ISSET(fd_udp, &rset)) {
+        if (FD_ISSET(fd_udp, &rset)) { // receive message from AS
             n = recvfrom(fd_udp, buffer, 128, 0, (struct sockaddr *)&addr_udp, &addrlen_udp);
             if (n == -1) printError("main: recvfrom()");
             buffer[n] = '\0';
@@ -231,8 +201,9 @@ int main(int argc, char *argv[]) {
 
             doOperation(buffer);
         }
-        if (FD_ISSET(fd_tcp, &rset)) {
-            printv("entrei"); // DEBUG
+
+        if (FD_ISSET(fd_tcp, &rset)) { // receive new connection from user
+            printv("entrei");          // DEBUG
             for (int i = 0; i < numClients; i++) {
                 if (fd_array[i].fd == -5) {
                     if ((fd_array[i].fd = accept(fd_tcp, (struct sockaddr *)&addr_tcp, &addrlen_tcp)) == -1) printError("main: accept()");
@@ -255,7 +226,48 @@ int main(int argc, char *argv[]) {
             }
         }
     }
+}
+
+int main(int argc, char *argv[]) {
+    int i;
+
+    if (argc < MINARGS || argc > MAXARGS) {
+        printf("Usage: %s [-q FSport] [-n ASIP] [-p ASport] [-v]\n", argv[0]);
+        printError("incorrect number of arguments");
+    }
+
+    strcpy(fsport, FSPORT);
+    strcpy(asport, ASPORT);
+    strcpy(asip, ASIP);
+
+    for (i = MINARGS; i < argc; i++) {
+        if (!strcmp(argv[i], "-v")) {
+            verbose = TRUE; // TODO move to common file
+        } else if (!strcmp(argv[i], "-h")) {
+            printf("Usage: %s [-q FSport] [-n ASIP] [-p ASport] [-v]\n", argv[0]);
+            exit(0);
+        } else if (!strcmp(argv[i], "-q")) {
+            strcpy(fsport, argv[++i]);
+        } else if (!strcmp(argv[i], "-p")) {
+            strcpy(asport, argv[++i]);
+        } else if (!strcmp(argv[i], "-n")) {
+            strcpy(asip, argv[++i]);
+        }
+    }
+
+    udpConnect(asip, asport, &fd_udp, &res_udp); // TODO sera que conectamos com o as logo aqui?
+
+    printv("udp connection with AS established"); // DEBUG
+
+    tcpOpenConnection(FSPORT, &fd_tcp, &res_tcp);
+    if (listen(fd_tcp, 5) == -1) printError("TCP: listen()");
+    fd_array = (tcp_client *)malloc(sizeof(struct tcp_client));
+
+    printv("tcp connection open"); // DEBUG
+
+    signal(SIGINT, endFS);
+
+    fdManager();
 
     return 0;
 }
-
