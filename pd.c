@@ -131,9 +131,9 @@ void unregistration() {
 
 char *validateRequest(char *message) {
     char command[5], uid[32], vc[32], fname[32], type[32];
-    char *res;
+    char *result;
     char op;
-    printf("message from AS: %s", message);
+
     sscanf(message, "%s %s %s %c", command, uid, vc, &op);
     if (!strcmp(command, "VLC") && strlen(vc) == 4) {
         switch (op) {
@@ -155,17 +155,15 @@ char *validateRequest(char *message) {
         }
         if (op == 'R' || op == 'U' || op == 'D') {
             sscanf(message, "%s %s %s %c %s", command, uid, vc, &op, fname);
-            sprintf(message, "VC=%s, %s:%s\n", vc, type, fname);
-            printf("%s", message);
+            printf("Operation: %s %s    |   VC = %s\n", type, fname, vc);
         } else {
             sscanf(message, "%s %s %s %c", command, uid, vc, &op);
-            sprintf(message, "VC=%s, %s\n", vc, type);
-            printf("%s", message);
+            printf("Operation: %s   |   VC = %s\n", type, vc);
         }
-        res = (char *)malloc(32 * sizeof(char));
-        sprintf(res, "RVC %s OK\n", uid);
-        printf("%s", res);
-        return res; // TODO tid
+        result = (char *)malloc(32 * sizeof(char));
+        sprintf(result, "RVC %s OK\n", uid);
+        printf("%s", result);
+        return result; // TODO tid
     } else {
         return "ERR\n";
     }

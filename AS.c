@@ -255,16 +255,29 @@ char *unregistration(char *uid, char *pass) {
     return "RUN OK\n";
 }
 
+char *validateOperation(char *uid, char *tid) {
+    //TO DO (Rodrigo)
+    char message[128];
+    char *reply;
+    sprintf(message, "User: UID=%s Fop [Fname], TID=%s", uid, tid);
+    printv(message);
+    reply = (char *)malloc(128 * sizeof(char));
+    sprintf(reply, "CNF %s %s Fop [Fname]\n", uid, tid);
+    return reply;
+}
+
 char *applyCommand(char *message) {
     char command[5], arg1[32], arg2[32], arg3[32], arg4[32];
     char msg[64];
-    sprintf(msg, "message from PD: %s", message);
+    sprintf(msg, "message from PD or FS: %s", message);
     printv(msg);
     sscanf(message, "%s %s %s %s %s", command, arg1, arg2, arg3, arg4);
     if (!strcmp(command, "REG")) {
         return registration(arg1, arg2, arg3, arg4);
     } else if (!strcmp(command, "UNR")) {
         return unregistration(arg1, arg2);
+    } else if (!strcmp(command, "VLD")) {
+        return validateOperation(arg1, arg2);
     } else {
         return "ERR\n";
     }
