@@ -116,7 +116,6 @@ void listFiles() {
     // list or l
     int n;
     char message[64];
-
     tcpConnect(fsip, fsport, &fd_fs, &res_fs);
     fsConnected = CONNECTION_ON;
 
@@ -186,7 +185,6 @@ void fdManager() {
         FD_SET(fd_as, &rset);
         if (fsConnected) {
             FD_SET(fd_fs, &rset);
-            printf("set in select\n");
         }
 
         maxfdp1 = MAX(STDIN, fd_as);
