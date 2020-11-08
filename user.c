@@ -175,7 +175,7 @@ void removeUser() {
 /*      === main code ===        */
 
 void fdManager() {
-    char command[6], reply[128], acr[4], filename[32];
+    char command[6], reply[128], acr[4], status[6], filename[32];
 
     int n, maxfdp1;
 
@@ -253,9 +253,12 @@ void fdManager() {
                 printf("Error: the UID is incorrect\n");
             else if (!strcmp(reply, "RRQ EFOP\n"))
                 printf("Error: FOP is invalid");
-            else if (!strcmp(acr, "RAU"))
-                printf("Authenticated! (TID=%s)\n", tid);
-            else {
+            else if (!strcmp(acr, "RAU")) {
+                if (!strcmp(tid, "0"))
+                    printf("Error: authentication unsuccessful");
+                else
+                    printf("Authenticated  |   TID = %s\n", tid);
+            } else {
                 printf("Error: unexpected answer from AS\n");
                 closeConnections();
             }
