@@ -315,6 +315,7 @@ Request and reply messages:
 - todas as mensagens terminam com um `\n` mas os ficheiros podem ter `\n` lá denro tambem. Quando estamos a fazer um read (no upload, list ou retrieve) como diferenciamos um `\n` normal do fim de uma mensagem
 - retrieve file: guardar num ficheiro ou no terminal?
 - o user consegue enviar mais requests ao as antes de receber a confirmação do ultimo?
+- [**Rodrigo**] random rid no user
 
 - PD
 - AS -> guardar registos em ficheiros, numa pasta
