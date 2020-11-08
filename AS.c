@@ -37,9 +37,66 @@ struct sockaddr_in addr_udp, addr_udp_client, addr_tcp, addr_fs;
 
 char asport[8], pdip[32], pdport[8];
 
+/*      === end AS ===       */
+
+void endAS() {
+    int i = 0;
+    freeaddrinfo(res_udp);
+    freeaddrinfo(res_udp_client);
+    close(fd_udp);
+    close(fd_udp_client);
+    freeaddrinfo(res_tcp);
+    close(fd_tcp);
+    for (i = 0; i < numClients; i++)
+        close(fd_array[i].fd);
+    printf("goodbye\n"); // DEBUG
+    exit(0);
+}
+
+/*      === auxiliar functions ===       */
+
 // print if verbose mode
 void printv(char *message) {
     if (verbose) printf("%s\n", message);
+}
+
+/*      === command functions ===        */
+
+char *registration(char *uid, char *pass, char *pdip_new, char *pdport_new) {
+    char message[64], path[32];
+    FILE *file;
+
+    sprintf(path, "registrations/%s", uid);
+    if (access(path, F_OK) != -1)
+        return "RRG NOK\n";
+
+    file = fopen(path, "w");
+    fprintf(file, "%s\n%s\n%s", pass, pdip_new, pdport_new);
+    fclose(file);
+    sprintf(message, "PD: new user, UID = %s", uid);
+    printv(message);
+    // TODO remove this
+    strcpy(pdip, pdip_new);
+    strcpy(pdport, pdport_new);
+    udpConnect(pdip, pdport, &fd_udp_client, &res_udp_client);
+    return "RRG OK\n";
+}
+
+char *unregistration(char *uid, char *pass) {
+    char path[32], currentPass[32];
+    FILE *file;
+
+    sprintf(path, "registrations/%s", uid);
+    if ((file = fopen(path, "r")) == NULL)
+        return "RUN NOK\n";
+
+    fscanf(file, "%s", currentPass);
+    fclose(file);
+    if (strcmp(currentPass, pass))
+        return "RUN NOK\n";
+
+    remove(path);
+    return "RUN OK\n";
 }
 
 char *login(int ind, char *uid, char *pass) {
@@ -131,6 +188,19 @@ char *secondAuthentication(char *uid, char *rid, char *vc) {
     return res; // TODO tid
 }
 
+char *validateOperation(char *uid, char *tid) {
+    //TO DO (Rodrigo)
+    char message[128];
+    char* reply;
+    sprintf(message, "User: UID=%s Fop [Fname], TID=%s", uid, tid);
+    printv(message);
+    reply = (char *)malloc(128 * sizeof(char));
+    sprintf(reply, "CNF %s %s Fop [Fname]\n", uid, tid);
+    return reply;
+}
+
+/*      === user manager ===        */
+
 void userSession(int ind) {
     int n, fd;
     char buffer[128], msg[256], command[5], arg1[32], arg2[32], arg3[32], arg4[32];
@@ -172,54 +242,6 @@ void userSession(int ind) {
     }
 }
 
-char *registration(char *uid, char *pass, char *pdip_new, char *pdport_new) {
-    char message[64], path[32];
-    FILE *file;
-
-    sprintf(path, "registrations/%s", uid);
-    if (access(path, F_OK) != -1)
-        return "RRG NOK\n";
-
-    file = fopen(path, "w");
-    fprintf(file, "%s\n%s\n%s", pass, pdip_new, pdport_new);
-    fclose(file);
-    sprintf(message, "PD: new user, UID = %s", uid);
-    printv(message);
-    // TODO remove this
-    strcpy(pdip, pdip_new);
-    strcpy(pdport, pdport_new);
-    udpConnect(pdip, pdport, &fd_udp_client, &res_udp_client);
-    return "RRG OK\n";
-}
-
-char *unregistration(char *uid, char *pass) {
-    char path[32], currentPass[32];
-    FILE *file;
-
-    sprintf(path, "registrations/%s", uid);
-    if ((file = fopen(path, "r")) == NULL)
-        return "RUN NOK\n";
-
-    fscanf(file, "%s", currentPass);
-    fclose(file);
-    if (strcmp(currentPass, pass))
-        return "RUN NOK\n";
-
-    remove(path);
-    return "RUN OK\n";
-}
-
-char *validateOperation(char *uid, char *tid) {
-    //TO DO (Rodrigo)
-    char message[128];
-    char* reply;
-    sprintf(message, "User: UID=%s Fop [Fname], TID=%s", uid, tid);
-    printv(message);
-    reply = (char *)malloc(128 * sizeof(char));
-    sprintf(reply, "CNF %s %s Fop [Fname]\n", uid, tid);
-    return reply;
-}
-
 char *applyCommand(char *message) {
     char command[5], arg1[32], arg2[32], arg3[32], arg4[32];
     char msg[64];
@@ -236,21 +258,6 @@ char *applyCommand(char *message) {
     else {
         return "ERR\n";
     }
-}
-
-void endAS() {
-    int i = 0;
-
-    freeaddrinfo(res_udp);
-    freeaddrinfo(res_udp_client);
-    close(fd_udp);
-    close(fd_udp_client);
-    freeaddrinfo(res_tcp);
-    close(fd_tcp);
-    for (i = 0; i < numClients; i++)
-        close(fd_array[i].fd);
-    printf("goodbye\n"); // DEBUG
-    exit(0);
 }
 
 int main(int argc, char *argv[]) {
