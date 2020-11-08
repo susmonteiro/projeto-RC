@@ -30,8 +30,16 @@ fd_set rset;
 struct addrinfo *res_as, *res_fs;
 
 char fsip[32], fsport[8], asip[32], asport[8];
-char uid[7], pass[10], vc[4], rid[5], file[32], tid[5];
+char uid[7], pass[10];
 char op;
+
+typedef struct request {
+    char tid[5];
+    char rid[5];
+    char vc[5];
+    char fop[2];
+    char fname[32];
+} * Request;
 
 /*      === end User ===       */
 
@@ -86,7 +94,9 @@ void login() {
 void requestFile() {
     // req Fop [Fname]
     int n;
-    char message[64];
+    char message[64], rid[5];
+
+    sprintf(rid, "%d", rand() % 9999);
 
     scanf("%c", &op);
     switch (op) {
@@ -505,7 +515,6 @@ int main(int argc, char *argv[]) {
     }
 
     tcpConnect(asip, asport, &fd_as, &res_as);
-    sprintf(rid, "%d", rand() % 9999);
 
     signal(SIGINT, closeConnections);
     signal(SIGPIPE, closeConnections);
