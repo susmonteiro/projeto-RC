@@ -312,6 +312,9 @@ Request and reply messages:
 - resend de mensagens no AS (e no FS) [**Susana**]
 - informar no terminal do PD quando morre de aborrecimento
 - um user pode ter que estabelecer várias ligações tcp com um fs ao mesmo tempo? Ou é suposto esperar por ler tudo o que vem do fs antes de permitir uma nova operação?
+- todas as mensagens terminam com um `\n` mas os ficheiros podem ter `\n` lá denro tambem. Quando estamos a fazer um read (no upload, list ou retrieve) como diferenciamos um `\n` normal do fim de uma mensagem
+- retrieve file: guardar num ficheiro ou no terminal?
+- o user consegue enviar mais requests ao as antes de receber a confirmação do ultimo?
 
 - PD
 - AS -> guardar registos em ficheiros, numa pasta
