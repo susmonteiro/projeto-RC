@@ -54,6 +54,50 @@ void endFS() {
     exit(0);
 }
 
+/*      === command functions ===        */
+
+char *list(char *uid, char *tid) {
+    // TO DO (Rodrigo)
+    char message[128];
+    sprintf(message, "list operation done for UID=%s", uid);
+    printv(message);
+    return "RLS N[fname fsize]\n";
+}
+
+char *delete (char *uid, char *tid, char *fname) {
+    // TO DO (Rodrigo)
+    char message[128];
+    sprintf(message, "%s deleted for UID=%s", fname, uid);
+    printv(message);
+    return "RDL status\n";
+}
+
+char *retrieve(char *uid, char *tid, char *fname) {
+    // TO DO (Rodrigo)
+    char message[128];
+    sprintf(message, "%s retrieved for UID=%s", fname, uid);
+    printv(message);
+    return "RTT status [Fsize data]\n";
+}
+
+char *upload(char *uid, char *tid, char *fname) {
+    // TO DO (Rodrigo)
+    char message[128];
+    sprintf(message, "%s stored for UID=%s", fname, uid);
+    printv(message);
+    return "RUP status\n";
+}
+
+char *removeAll(char *uid, char *tid) {
+    // TO DO (Rodrigo)
+    char message[128];
+    sprintf(message, "operation remove done for UID=%s", uid);
+    printv(message);
+    return "RRM status\n";
+}
+
+/*      === user manager ===        */
+
 void userSession(int ind) {
     int n, fd;
     char buffer[128], message[128], command[5], arg1[32], arg2[32], arg3[32], arg4[32], arg5[32], type[32];
@@ -104,39 +148,13 @@ void userSession(int ind) {
     if (n == -1) printError("validateOperation: sendto()");
 }
 
-char *list(char *uid, char *tid) {
-    // TO DO (Rodrigo)
-    return "RLS N[fname fsize]\n";
-}
-
-char *delete (char *uid, char *tid, char *fname) {
-    // TO DO (Rodrigo)
-    return "RDL status\n";
-}
-
-char *retrieve(char *uid, char *tid, char *fname) {
-    // TO DO (Rodrigo)
-    return "RTT status [Fsize data]\n";
-}
-
-char *upload(char *uid, char *tid, char *fname) {
-    // TO DO (Rodrigo)
-    return "RUP status\n";
-}
-
-char *removeAll(char *uid, char *tid) {
-    // TO DO (Rodrigo)
-    return "RRM status\n";
-}
-
 void doOperation(char *buffer) {
     char uid[7], tid[6], fname[32], reply[128], command[5];
     char fop;
     int n, i, fd = 0;
     sscanf(buffer, "%s %s %s", command, uid, tid);
     if (!strcmp(command, "CNF")) {
-        //Test for now
-        fop = 'L';
+        fop = 'L'; //Test for now
         for (i = 0; i < numClients; i++) {
             if (!strcmp(fd_array[i].uid, uid)) {
                 fd = fd_array[i].fd;
@@ -197,7 +215,7 @@ void fdManager() {
             n = recvfrom(fd_udp, buffer, 128, 0, (struct sockaddr *)&addr_udp, &addrlen_udp);
             if (n == -1) printError("main: recvfrom()");
             buffer[n] = '\0';
-            printv("received message from as");
+            printv("received message from as"); //DEBUG
 
             doOperation(buffer);
         }
@@ -220,7 +238,7 @@ void fdManager() {
                 tcp_flag = 0;
         }
 
-        for (i = 0; i < numClients; i++) {
+        for (i = 0; i < numClients; i++) { // receive command from User
             if (FD_ISSET(fd_array[i].fd, &rset)) {
                 userSession(i);
             }
