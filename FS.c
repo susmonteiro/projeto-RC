@@ -64,20 +64,51 @@ char *list(char *uid, char *tid) {
     return "RLS N[fname fsize]\n";
 }
 
-char *delete (char *uid, char *tid, char *fname) {
-    // TO DO (Rodrigo)
+char *delete (int fd, char *uid, char *fname) {
+    // TODO NOK, INV, ERR
     char message[128];
-    sprintf(message, "%s deleted for UID=%s", fname, uid);
+    int n;
+
+    if (remove(fname) != 0) {
+        n = write(fd, "RDL EOF\n", 8);
+        if (n == -1) errorExit("write()");
+        return;
+    }
+
+    sprintf(message, "file %s deleted for user %s", fname, uid);
     printv(message);
-    return "RDL status\n";
+    n = write(fd, "RDL OK\n", 7);
+    if (n == -1) errorExit("write()");
 }
 
-char *retrieve(char *uid, char *tid, char *fname) {
-    // TO DO (Rodrigo)
-    char message[128];
-    sprintf(message, "%s retrieved for UID=%s", fname, uid);
+char *retrieve(int fd, char *uid, char *fname) {
+    // TODO RRT NOK, RTT INV
+    int n, fsize;
+    char message[128], buffer[128], fd[6];
+    FILE *file;
+
+    if ((file = fopen(fname, "r")) == NULL) {
+        sprintf(message, "Error: file %s from user %s does not exist", fname, uid);
+        printv(message);
+        return "RRT EOF\n";
+    }
+
+    fseek(file, 0, SEEK_END);
+    fsize = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    sprintf(message, "file %s retrieved for user %s", fname, uid);
     printv(message);
-    return "RTT status [Fsize data]\n";
+
+    sprintf(message, "RRT OK %d ", fsize);
+    n = write(fd, message, strlen(message));
+    if (n == -1) errorExit("write()");
+
+    while (fgets(buffer, 128, (FILE *)file) != NULL) {
+        n = write(fd, buffer, strlen(buffer));
+        if (n == -1) errorExit("write()");
+    }
+    fclose(file);
 }
 
 char *upload(char *uid, char *tid, char *fname) {
@@ -166,21 +197,23 @@ void doOperation(char *buffer) {
             break;
         case 'D':
             sscanf(buffer, "%s %s %c %s", uid, tid, &fop, fname);
-            strcpy(reply, delete (uid, tid, fname));
+            strcpy(reply, delete (fd, uid, fname));
             break;
         case 'R':
             sscanf(buffer, "%s %s %c %s", uid, tid, &fop, fname);
-            strcpy(reply, retrieve(uid, tid, fname));
+            strcpy(reply, retrieve(fd, uid, fname));
             break;
         case 'U':
             sscanf(buffer, "%s %s %c %s", uid, tid, &fop, fname);
-            strcpy(reply, upload(uid, tid, fname));
+            strcpy(reply, upload(fd, uid, fname));
             break;
         case 'X':
             strcpy(reply, removeAll(uid, tid));
             break;
+        case 'E':
+            strcpy(reply, "INV"); //TODO get acr
         }
-        printf("operation validated\n");
+        printv("operation validated");
     } else
         strcpy(reply, "ERR\n");
     n = write(fd, reply, strlen(reply));
