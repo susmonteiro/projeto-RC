@@ -155,10 +155,10 @@ char *validateRequest(char *message) {
         }
         if (op == 'R' || op == 'U' || op == 'D') {
             sscanf(message, "%s %s %s %c %s", command, uid, vc, &op, fname);
-            printf("Operation: %s %s\nVC = %s\n", type, fname, vc);
+            printf("Operation: %s %s    |   VC = %s\n", type, fname, vc);
         } else {
             sscanf(message, "%s %s %s %c", command, uid, vc, &op);
-            printf("Operation: %s\nVC = %s\n", type, vc);
+            printf("Operation: %s   |   VC = %s\n", type, vc);
         }
         result = (char *)malloc(32 * sizeof(char));
         sprintf(result, "RVC %s OK\n", uid);
@@ -219,7 +219,7 @@ void fdManager() {
                 printf("Registration successful\n");
             } else if (!strcmp(reply, "RRG NOK\n") && typeMessage == TYPE_REG) {
                 resetLastMessage();
-                printf("Error: already registered\n");
+                printf("Error: registration unsuccessful\n");
             } else if (!strcmp(reply, "RUN OK\n") && typeMessage == TYPE_END) {
                 resetLastMessage();
                 printf("Unregistration successful\n");
