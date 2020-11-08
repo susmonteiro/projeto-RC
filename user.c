@@ -228,14 +228,30 @@ void retrieveFileReply() {
 
 void uploadFile(char *filename) {
     // upload filename or u filename
-    int n;
-    char message[128];
+    int n, fsize;
+    char message[128], buffer[128];
+    FILE *file;
 
     tcpConnect(fsip, fsport, &fd_fs, &res_fs);
     fsConnected = CONNECTION_ON;
-    sprintf(message, "UPL %s %s %s Fsize Data\n", uid, tid, filename); // TODO
+    if ((file = fopen(filename, "r")) == NULL) {
+        printf("Error: file %s does not exist\n", filename);
+        closeFSconnection();
+        return;
+    }
+
+    fseek(file, 0, SEEK_END);
+    fsize = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    sprintf(message, "UPL %s %s %s %d ", uid, tid, filename, fsize); // TODO
     n = write(fd_fs, message, strlen(message));
     if (n == -1) errorExit("write()");
+
+    while (fgets(buffer, 128, (FILE *)file) != NULL) {
+        n = write(fd_fs, buffer, strlen(buffer));
+        if (n == -1) errorExit("write()");
+    }
+    fclose(file);
 }
 
 void uploadFileReply() {
