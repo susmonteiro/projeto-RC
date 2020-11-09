@@ -310,6 +310,7 @@ Request and reply messages:
 - um user pode ter que estabelecer várias ligações tcp com um fs ao mesmo tempo? Ou é suposto esperar por ler tudo o que vem do fs antes de permitir uma nova operação?
 - como funciona um upload? Quando lemos o comando do User ele tem que ser confirmado com o AS. Devemos ler logo os dados? Deixar em buffer (e consequentemente impedir o user de fazer mais requests)
 - como fazemos o sighandler? Temos que colocar uma flag ou podemos terminar nessa função? Desativar o sighandler dentro da funcao? 
+- imaginando que o user recebe um file do FS. É suposto confirmarmos no User que esse pedido foi feito?
 
 
 ---
