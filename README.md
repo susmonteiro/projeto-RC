@@ -309,6 +309,8 @@ Request and reply messages:
 - todas as mensagens terminam com um `\n` mas os ficheiros podem ter `\n` lá denro tambem. Quando estamos a fazer um read (no upload, list ou retrieve) como diferenciamos um `\n` normal do fim de uma mensagem
 - um user pode ter que estabelecer várias ligações tcp com um fs ao mesmo tempo? Ou é suposto esperar por ler tudo o que vem do fs antes de permitir uma nova operação?
 - como funciona um upload? Quando lemos o comando do User ele tem que ser confirmado com o AS. Devemos ler logo os dados? Deixar em buffer (e consequentemente impedir o user de fazer mais requests)
+- como fazemos o sighandler? Temos que colocar uma flag ou podemos terminar nessa função? Desativar o sighandler dentro da funcao? 
+
 
 ---
 ---
