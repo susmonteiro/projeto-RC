@@ -1,3 +1,9 @@
+/* User Application */
+
+/* ===      TODO in User        ===
+    - function retrieve file: it writes things it shouldn't to file 
+*/
+
 #include "config.h"
 #include "connection.h"
 #include "error.h"
@@ -154,7 +160,6 @@ void listFilesReply() {
     int i = 0, numFiles;
 
     readUntilSpace(fd_fs, status);
-    printf("status read: %s\n", status); // DEBUG
 
     if (!strcmp(status, "EOF")) {
         printf("Error: no files to list\n");
@@ -203,7 +208,7 @@ void retrieveFileReply(Transaction trans) {
     readUntilSpace(fd_fs, status);
 
     if (!strcmp(status, "OK")) {
-        printf("Retrieve Sucessful\nPrinting Data...\n");
+        printf("Retrieve Sucessful\n");
     } else if (!strcmp(status, "EOF")) {
         printf("Error: file not available\n");
         return;
@@ -395,7 +400,6 @@ void fdManager(Request req, Transaction trans) {
 
         if (FD_ISSET(STDIN, &rset)) {
             scanf("%s", command);
-            printf("command: %s\n", command); // DEBUG
 
             if (!strcmp(command, "login")) {
                 login();
@@ -406,7 +410,6 @@ void fdManager(Request req, Transaction trans) {
             } else {
                 if ((!strcmp(command, "list")) || (!strcmp(command, "l"))) {
                     listFiles(trans);
-                    printf("list sent\n"); // DEBUG
                 } else if ((!strcmp(command, "retrieve")) || (!strcmp(command, "r"))) {
                     retrieveFile(trans);
                 } else if ((!strcmp(command, "upload")) || (!strcmp(command, "u"))) {
@@ -459,7 +462,6 @@ void fdManager(Request req, Transaction trans) {
 
         if (fsConnected == CONNECTION_OFF) continue;
         if (FD_ISSET(fd_fs, &rset)) {
-            printf("inside fs select\n"); // DEBUG
             char typeMsg[4];
             n = read(fd_fs, typeMsg, 4); // read type + space
             if (n == -1)
@@ -469,8 +471,6 @@ void fdManager(Request req, Transaction trans) {
                 closeConnections();
             }
             typeMsg[3] = '\0';
-
-            printf("received message: %s\n", typeMsg); // DEBUG
 
             if (!strcmp(typeMsg, "RLS"))
                 listFilesReply();
