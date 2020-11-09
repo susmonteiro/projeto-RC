@@ -528,7 +528,11 @@ int main(int argc, char *argv[]) {
     signal(SIGPIPE, closeConnections);
 
     Request req = (Request)malloc(sizeof(struct request));
+    strcpy(req->rid, "0000");
+    req->fop = 'E';
     Transaction trans = (Transaction)malloc(sizeof(struct transaction));
+    strcpy(trans->tid, "0000");
+    trans->fop = 'E';
 
     fdManager(req, trans);
 
