@@ -12,6 +12,7 @@
 #include <string.h>
 #include <sys/select.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -92,7 +93,7 @@ void deleteFile(int fd, char *uid, char *fname) {
 }
 
 void retrieveFile(int fd, char *uid, char *fname) {
-    // TODO RRT NOK, RTT INV
+    // TODO RRT NOK, ERR
     int n, fsize;
     char message[128], buffer[128];
     FILE *file;
@@ -124,7 +125,7 @@ void retrieveFile(int fd, char *uid, char *fname) {
 }
 
 void uploadFile(int fd, char *uid, char *fname) {
-    // TO DO (Rodrigo)
+    int n, fsize;
     char message[128];
     sprintf(message, "%s stored for UID=%s", fname, uid);
     printv(message);
@@ -142,7 +143,7 @@ void removeAll(char *uid, char *tid) {
 
 void userSession(int ind) {
     int n, fd, i;
-    char buffer[128], message[128], command[5], uid[32], tid[32], fname[32], fsize[32], data[32], type[32];
+    char buffer[128], message[128], command[5], uid[32], tid[32], fname[32], fsize[32], type[32];
     char msg[256]; //DEBUG
 
     n = read(users[ind]->fd, buffer, 128);
@@ -194,7 +195,7 @@ void userSession(int ind) {
         strcpy(transactions[i]->fname, fname);
 
     } else if (!strcmp(command, "UPL")) {
-        sscanf(buffer, "%s %s %s %s %s %s", command, uid, tid, fname, fsize, data);
+        sscanf(buffer, "%s %s %s %s %s ", command, uid, tid, fname, fsize);
         sprintf(buffer, "UID=%s: upload %s (%s Bytes)\n", uid, fname, fsize);
         strcpy(transactions[i]->fop, "U");
 
@@ -384,6 +385,8 @@ int main(int argc, char *argv[]) {
             strcpy(asip, argv[++i]);
         }
     }
+
+    mkdir("USERS", 0777);
 
     udpConnect(asip, asport, &fd_udp, &res_udp); // TODO sera que conectamos com o as logo aqui?
 

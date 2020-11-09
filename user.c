@@ -30,7 +30,7 @@ fd_set rset;
 struct addrinfo *res_as, *res_fs;
 
 char fsip[32], fsport[8], asip[32], asport[8];
-char uid[7], pass[10];
+char uid[7], pass[10], file[32], rid[5], vc[5], tid[5];
 char op;
 
 typedef struct request {
@@ -96,7 +96,7 @@ void requestFile() {
     int n;
     char message[64], rid[5];
 
-    sprintf(rid, "%d", rand() % 9999);
+    sprintf(rid, "%04d", rand() % 10000);
 
     scanf("%c", &op);
     switch (op) {
@@ -513,6 +513,8 @@ int main(int argc, char *argv[]) {
             strcpy(fsport, argv[++i]);
         }
     }
+
+    srand(time(NULL));
 
     tcpConnect(asip, asport, &fd_as, &res_as);
 
