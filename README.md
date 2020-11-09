@@ -305,6 +305,10 @@ Request and reply messages:
 - quando se faz uma unregistration é suposto apagar mesmo o registo?
 - um PD tem de ser capaz de servir vários utilizadores?
 - é suposto o AS conectar-se ao PD logo que é feito um registo?
+- o user consegue enviar mais requests ao as antes de receber a confirmação do ultimo? -> se sim como sabemos a que request corresponde o tid enviado?
+- todas as mensagens terminam com um `\n` mas os ficheiros podem ter `\n` lá denro tambem. Quando estamos a fazer um read (no upload, list ou retrieve) como diferenciamos um `\n` normal do fim de uma mensagem
+- um user pode ter que estabelecer várias ligações tcp com um fs ao mesmo tempo? Ou é suposto esperar por ler tudo o que vem do fs antes de permitir uma nova operação?
+- como funciona um upload? Quando lemos o comando do User ele tem que ser confirmado com o AS. Devemos ler logo os dados? Deixar em buffer (e consequentemente impedir o user de fazer mais requests)
 
 ---
 ---
@@ -312,11 +316,7 @@ Request and reply messages:
 - verificar que os ficheiros estao sempre a terminar como deve de ser e que os servidores nunca morrem quando recebem algo inválido [**Susana**]
 - resend de mensagens no AS (e no FS) [**Susana**]
 - informar no terminal do PD quando morre de aborrecimento
-- um user pode ter que estabelecer várias ligações tcp com um fs ao mesmo tempo? Ou é suposto esperar por ler tudo o que vem do fs antes de permitir uma nova operação?
-- todas as mensagens terminam com um `\n` mas os ficheiros podem ter `\n` lá denro tambem. Quando estamos a fazer um read (no upload, list ou retrieve) como diferenciamos um `\n` normal do fim de uma mensagem
-- retrieve file: guardar num ficheiro ou no terminal?
-- o user consegue enviar mais requests ao as antes de receber a confirmação do ultimo?
-- alínea d) do user-FS. Name and path displayed in user?
+
 - [**Rodrigo**] random rid no user
 
 - PD
