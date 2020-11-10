@@ -155,7 +155,7 @@ void requestFile(Request req) {
         sprintf(message, "REQ %s %s %c %s\n", uid, req->rid, req->fop, fname);
         break;
     default:
-        printf("Error: wrong command");
+        printf("Error: wrong command\n");
         return;
     }
     n = write(fd_as, message, strlen(message));
@@ -316,7 +316,7 @@ void retrieveFileReply(Transaction trans) {
 void uploadFile(Transaction trans) {
     // upload filename or u filename
     int n, fsize;
-    char message[128], buffer[128];
+    char buffer[129], message[128];
     FILE *file;
 
     if (isTransactionPending(trans)) return;
@@ -343,6 +343,7 @@ void uploadFile(Transaction trans) {
         n = write(fd_fs, buffer, strlen(buffer));
         if (n == -1) errorExit("write()");
     }
+
     fclose(file);
     trans->pending = TRUE;
 }
@@ -359,7 +360,7 @@ void uploadFileReply(Transaction trans) {
 
     if (!strcmp(status, "OK")) {
         printf("Upload Sucessful\n");
-    } else if (!strcmp(status, "DUF")) {
+    } else if (!strcmp(status, "DUP")) {
         printf("Error: file already exists\n");
         return;
     } else if (!strcmp(status, "FULL")) {
@@ -372,6 +373,7 @@ void uploadFileReply(Transaction trans) {
         printf("Error: bad request\n");
         return;
     } else {
+        puts(status);
         printf("Error: unexpected message from FS\n");
         closeConnections();
     }
@@ -454,6 +456,7 @@ void removeUserReply(Transaction trans) {
 
     if (!strcmp(status, "OK")) {
         printf("Remove Sucessful\n");
+        asConnected = FALSE;
     } else if (!strcmp(status, "NOK")) {
         printf("Error: user %s does not exist\n", uid);
         return;
@@ -494,7 +497,7 @@ void fdManager(Request req, Transaction trans) {
         if (FD_ISSET(STDIN, &rset)) {
             scanf("%s", command);
 
-            if (strcmp(command, "login") && asConnected == FALSE) {
+            if (strcmp(command, "login") && strcmp(command, "exit") && asConnected == FALSE) {
                 readGarbage();
                 printf("Error: first please login\n");
                 continue;
@@ -532,10 +535,10 @@ void fdManager(Request req, Transaction trans) {
 
             if (!strcmp(command, "RLO")) {
                 if (!strcmp(status, "OK")) {
-                    printf("You are now logged in\n");
                     strcpy(uid, tmpUid);
                     strcpy(pass, tmpPass);
                     asConnected = TRUE;
+                    printf("User %s is now logged in\n", uid);
                 } else if (!strcmp(status, "NOK"))
                     printf("Error: login unsuccessful\n");
             } else if (!strcmp(command, "RRQ")) {
