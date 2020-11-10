@@ -93,8 +93,8 @@ void readUntilSpace(int fd, char *buffer) { // TODO function common to other fil
 
 void readGarbage() {
     char c;
-    while ((c = getchar()) != '\n')
-        ;
+    while ((c = getchar()) != '\n') {
+    }
 }
 
 int isTransactionPending(Transaction trans) {
@@ -224,7 +224,7 @@ void listFilesReply(Transaction trans) {
             printf("Error: unexpected message from FS\n");
             closeConnections();
         }
-        printf("numFiles=%d\n", numFiles); // DEBUG
+        printf("Number of Files: %d\n", numFiles);
     }
 
     for (i = 1; i <= numFiles; i++) {
