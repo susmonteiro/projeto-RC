@@ -174,7 +174,6 @@ char *validateRequest(char *message) {
         }
         result = (char *)malloc(32 * sizeof(char));
         sprintf(result, "RVC %s OK\n", uid);
-        printf("%s", result);
         return result; // TODO tid
     } else {
         return "ERR\n";
