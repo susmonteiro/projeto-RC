@@ -274,6 +274,8 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    srand(time(NULL));
+
     udpOpenConnection(pdport, &fd_udp, &res_udp);
     addrlen_udp = sizeof(addr_udp);
     udpConnect(asip, asport, &fd_udp_client, &res_udp_client);
