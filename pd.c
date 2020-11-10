@@ -117,6 +117,8 @@ void registration(char *tmpUid, char *tmpPass) {
     len = sprintf(message, "REG %s %s %s %s\n", uid, pass, pdip, pdport);
     if (len < 0) errorExit("sprintf()");
 
+    puts(message); // DEBUG
+
     n = sendto(fd_udp_client, message, len * sizeof(char), 0, res_udp_client->ai_addr, res_udp_client->ai_addrlen);
     if (n == -1) errorExit("sendto()");
     strcpy(lastMessage, message);
