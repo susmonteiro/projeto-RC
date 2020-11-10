@@ -114,7 +114,7 @@ void registration(char *tmpUid, char *tmpPass) {
         return;
     }
 
-    len = sprintf(message, "REG %s %s %s %s\n", uid, pass, pdip, pdport);
+    len = sprintf(message, "REG %s %s %s %s\n", tmpUid, tmpPass, pdip, pdport);
     if (len < 0) errorExit("sprintf()");
 
     puts(message); // DEBUG
