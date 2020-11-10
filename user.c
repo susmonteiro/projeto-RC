@@ -231,7 +231,7 @@ void retrieveFileReply(Transaction trans) {
 
     if (access(trans->fname, F_OK) != -1) {
         printf("Error: file %s already exists\n", trans->fname);
-        file = fopen("/dev/null", "w");
+        file = NULL;
     } else {
         file = fopen(trans->fname, "w");
     }
@@ -244,7 +244,8 @@ void retrieveFileReply(Transaction trans) {
             printf("Error: FS closed\n");
             closeConnections();
         }
-        fputs(buffer, (FILE *)file);
+        if (file != NULL)
+            fputs(buffer, (FILE *)file);
     } while (n == 128 && buffer[127] != '\n');
 }
 
