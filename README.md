@@ -302,15 +302,19 @@ Request and reply messages:
 
 #### Novas questões:
 - confirmar que o PD só pode ter um uid e pass (e portanto que o AS deve devolver NOK se o PD se tenta registar com um uid e pass diferentes)
-- quando se faz uma unregistration é suposto apagar mesmo o registo?
+> não deixar um segundo register no pd
 - um PD tem de ser capaz de servir vários utilizadores?
-- é suposto o AS conectar-se ao PD logo que é feito um registo?
-- o user consegue enviar mais requests ao as antes de receber a confirmação do ultimo? -> se sim como sabemos a que request corresponde o tid enviado?
-- todas as mensagens terminam com um `\n` mas os ficheiros podem ter `\n` lá denro tambem. Quando estamos a fazer um read (no upload, list ou retrieve) como diferenciamos um `\n` normal do fim de uma mensagem
+- o PD está sempre conectado ao AS ou só quando precisa de mandar um reg ou unreg?
+> não, pode estar sempre
+- o user consegue enviar mais requests ao AS antes de receber a confirmação do ultimo? -> se sim como sabemos a que request corresponde o tid enviado?
+> não aceitar outro request até o anigo não estar resolvido
+- todas as mensagens terminam com um `\n` mas os ficheiros podem ter `\n` lá dentro tambem. Quando estamos a fazer um read (no upload, list ou retrieve) como diferenciamos um `\n` normal do fim de uma mensagem
+> sabemos o tamanho do ficheiro
 - um user pode ter que estabelecer várias ligações tcp com um fs ao mesmo tempo? Ou é suposto esperar por ler tudo o que vem do fs antes de permitir uma nova operação?
-- como funciona um upload? Quando lemos o comando do User ele tem que ser confirmado com o AS. Devemos ler logo os dados? Deixar em buffer (e consequentemente impedir o user de fazer mais requests)
 - como fazemos o sighandler? Temos que colocar uma flag ou podemos terminar nessa função? Desativar o sighandler dentro da funcao? 
+> tentar fazer o melhor possível
 - imaginando que o user recebe um file do FS. É suposto confirmarmos no User que esse pedido foi feito?
+> sim, e terminar se não tiver feito
 
 
 ---
@@ -319,6 +323,7 @@ Request and reply messages:
 - verificar que os ficheiros estao sempre a terminar como deve de ser e que os servidores nunca morrem quando recebem algo inválido [**Susana**]
 - resend de mensagens no AS (e no FS) [**Susana**]
 - informar no terminal do PD quando morre de aborrecimento
+- se o PD nunca fez register() não é preciso enviar unregister()
 
 - [**Rodrigo**] random rid no user
 
