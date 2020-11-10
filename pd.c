@@ -41,6 +41,9 @@ The PD application can also receive a command to exit, unregistering the user.
 #define TYPE_REG 1
 #define TYPE_END 2
 
+#define NOT_REGISTERED 0
+#define REGISTERED 1
+
 #define MAX(a, b) a *(a > b) + b *(b >= a)
 
 void fdManager();
@@ -58,8 +61,8 @@ int typeMessage = NO_MSG;
 char lastMessage[128];
 
 char pdip[32], pdport[8], asip[32], asport[8];
-char command[6], uid[7], pass[10], buffer[32];
-int maxfdp1;
+char uid[6], pass[9];
+int maxfdp1, registered = NOT_REGISTERED;
 
 /*      === resend messages that were not acknowledge ===       */
 
@@ -94,13 +97,20 @@ void exitPD() {
 
 /*      === command functions ===        */
 
-void registration(char *uid, char *pass) {
+void registration(char *tmpUid, char *tmpPass) {
     // reg UID pass
     int n, len;
     char message[64];
 
-    if (strlen(uid) != 5 || strlen(pass) != 8) {
+    scanf("%s %s", tmpUid, tmpPass);
+
+    if (strlen(tmpUid) != 5 || strlen(tmpPass) != 8) {
         printf("Error: invalid arguments\n");
+        return;
+    }
+
+    if (registered == REGISTERED) {
+        printf("Error: this pd is already registered\n");
         return;
     }
 
@@ -118,6 +128,8 @@ void unregistration() {
     // exit
     int n, len;
     char message[64];
+
+    if (registered == NOT_REGISTERED) freePD();
 
     len = sprintf(message, "UNR %s %s\n", uid, pass);
     if (len < 0) errorExit("sprintf()");
@@ -173,7 +185,7 @@ char *validateRequest(char *message) {
 
 void fdManager() {
     int n;
-    char reply[9];
+    char reply[9], buffer[32], command[6], tmpUid[7], tmpPass[10];
 
     while (1) {
         FD_ZERO(&rset);
@@ -191,8 +203,7 @@ void fdManager() {
             if (typeMessage == NO_MSG) { // reads message if there are none waiting to be acknowledge
                 scanf("%s", command);
                 if (!strcmp(command, "reg")) {
-                    scanf("%s %s", uid, pass);
-                    registration(uid, pass);
+                    registration(tmpUid, tmpPass);
                 } else if (!strcmp(command, "exit")) {
                     unregistration();
                 } else
@@ -217,6 +228,9 @@ void fdManager() {
             if (!strcmp(reply, "RRG OK\n") && typeMessage == TYPE_REG) {
                 resetLastMessage();
                 printf("Registration successful\n");
+                strcpy(uid, tmpUid);
+                strcpy(pass, tmpPass);
+                registered = REGISTERED;
             } else if (!strcmp(reply, "RRG NOK\n") && typeMessage == TYPE_REG) {
                 resetLastMessage();
                 printf("Error: Registration unsuccessful\n");
