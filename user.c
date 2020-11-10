@@ -193,6 +193,12 @@ void retrieveFile(Transaction trans) {
 
     scanf("%s", trans->fname);
 
+    // check if file exists
+    if (access(trans->fname, F_OK) != -1) {
+        printf("Error: file %s already exists\n", trans->fname);
+        return;
+    }
+
     tcpConnect(fsip, fsport, &fd_fs, &res_fs);
     fsConnected = CONNECTION_ON;
     sprintf(message, "RTV %s %s %s\n", uid, trans->tid, trans->fname);
