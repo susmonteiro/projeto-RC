@@ -24,44 +24,47 @@
 #define MAXARGS 10
 #define MINARGS 1
 
-#define CONNECTION_ON 1
-#define CONNECTION_OFF 0
+#define TRUE 1
+#define FALSE 0
 
 #define MAX(a, b) a *(a > b) + b *(b >= a)
 
-int fsConnected = CONNECTION_OFF;
+int fsConnected = FALSE, asConnected = FALSE;
 
 int fd_as, fd_fs;
 fd_set rset;
 struct addrinfo *res_as, *res_fs;
 
 char fsip[32], fsport[8], asip[32], asport[8];
-char uid[7], pass[10];
+char uid[6], pass[9];
 
 typedef struct request {
     char rid[5];
     char fop;
-    char fname[32];
+    int pending;
 } * Request;
 
 typedef struct transaction {
     char tid[5];
     char fop;
     char fname[32];
+    int pending;
 } * Transaction;
 
 /*      === end User ===       */
 
 void closeASconnection() {
+    if (asConnected == FALSE) return;
     freeaddrinfo(res_as);
     close(fd_as);
+    asConnected = FALSE;
 }
 
 void closeFSconnection() {
-    if (fsConnected == CONNECTION_OFF) return;
+    if (fsConnected == FALSE) return;
     freeaddrinfo(res_fs);
     close(fd_fs);
-    fsConnected = CONNECTION_OFF;
+    fsConnected = FALSE;
 }
 
 void closeConnections() {
@@ -88,16 +91,40 @@ void readUntilSpace(int fd, char *buffer) { // TODO function common to other fil
     buffer[--i] = '\0';
 }
 
+void readGarbage() {
+    char c;
+    while ((c = getchar()) != '\n')
+        ;
+}
+
+int isTransactionPending(Transaction trans) {
+    if (trans->pending) {
+        readGarbage();
+        printf("Error: operation with FS pending\n");
+        return TRUE;
+    }
+    return FALSE;
+}
+
 /*      === command functions ===        */
 
-void login() {
+void login(char *tmpUid, char *tmpPass) {
     // login UID pass
     int n;
     char message[64];
-    scanf("%s %s", uid, pass);
+    scanf("%s %s", tmpUid, tmpPass);
 
-    sprintf(message, "LOG %s %s\n", uid, pass);
-    //printf("our message: %s", message);   //DEBUG
+    if (strlen(tmpUid) != 5 || strlen(tmpPass) != 8) {
+        printf("Error: invalid arguments\n");
+        return;
+    }
+
+    if (asConnected == TRUE) {
+        printf("Error: this user is already logged in\n");
+        return;
+    }
+
+    sprintf(message, "LOG %s %s\n", tmpUid, tmpPass);
     n = write(fd_as, message, strlen(message));
     if (n == -1) errorExit("write()");
 }
@@ -105,7 +132,13 @@ void login() {
 void requestFile(Request req) {
     // req Fop [Fname]
     int n;
-    char message[64];
+    char message[64], fname[32];
+
+    if (req->pending) {
+        readGarbage();
+        printf("Error: request pending\n");
+        return;
+    }
 
     sprintf(req->rid, "%04d", rand() % 10000);
 
@@ -118,16 +151,16 @@ void requestFile(Request req) {
     case 'D':
     case 'R':
     case 'U':
-        scanf("%s", req->fname);
-        sprintf(message, "REQ %s %s %c %s\n", uid, req->rid, req->fop, req->fname);
+        scanf("%s", fname);
+        sprintf(message, "REQ %s %s %c %s\n", uid, req->rid, req->fop, fname);
         break;
     default:
         printf("Error: wrong command");
         return;
     }
-    //printf("our message: %s\n", message); //DEBUG
     n = write(fd_as, message, strlen(message));
     if (n == -1) errorExit("write()");
+    req->pending = TRUE;
 }
 
 void validateCode(Request req) {
@@ -135,10 +168,15 @@ void validateCode(Request req) {
     int n;
     char message[64], vc[5];
 
+    if (!req->pending) {
+        readGarbage();
+        printf("Error: no request done\n");
+        return;
+    }
+
     scanf("%s", vc);
 
     sprintf(message, "AUT %s %s %s\n", uid, req->rid, vc);
-    //printf("%s\n", message); //DEBUG
     n = write(fd_as, message, strlen(message));
     if (n == -1) errorExit("write()");
 }
@@ -147,19 +185,29 @@ void listFiles(Transaction trans) {
     // list or l
     int n;
     char message[64];
+
+    if (isTransactionPending(trans)) return;
+    trans->fop = 'L';
+
     tcpConnect(fsip, fsport, &fd_fs, &res_fs);
-    fsConnected = CONNECTION_ON;
+    fsConnected = TRUE;
 
     sprintf(message, "LST %s %s\n", uid, trans->tid);
     n = write(fd_fs, message, strlen(message));
     if (n == -1) errorExit("write()");
+    trans->pending = TRUE;
 }
 
-void listFilesReply() {
+void listFilesReply(Transaction trans) {
     char status[64], filename[32], fsize[32];
     int i = 0, numFiles;
 
     readUntilSpace(fd_fs, status);
+
+    if (trans->fop != 'L') {
+        printf("Error: operation not requested received\n");
+        closeConnections();
+    }
 
     if (!strcmp(status, "EOF")) {
         printf("Error: no files to list\n");
@@ -191,6 +239,9 @@ void retrieveFile(Transaction trans) {
     int n;
     char message[128];
 
+    if (isTransactionPending(trans)) return;
+    trans->fop = 'R';
+
     scanf("%s", trans->fname);
 
     // check if file exists
@@ -200,10 +251,11 @@ void retrieveFile(Transaction trans) {
     }
 
     tcpConnect(fsip, fsport, &fd_fs, &res_fs);
-    fsConnected = CONNECTION_ON;
+    fsConnected = TRUE;
     sprintf(message, "RTV %s %s %s\n", uid, trans->tid, trans->fname);
     n = write(fd_fs, message, strlen(message));
     if (n == -1) errorExit("write()");
+    trans->pending = TRUE;
 }
 
 void retrieveFileReply(Transaction trans) {
@@ -212,6 +264,11 @@ void retrieveFileReply(Transaction trans) {
     FILE *file;
 
     readUntilSpace(fd_fs, status);
+
+    if (trans->fop != 'R') {
+        printf("Error: operation not requested received\n");
+        closeConnections();
+    }
 
     if (!strcmp(status, "OK")) {
         printf("Retrieve Sucessful\n");
@@ -262,10 +319,13 @@ void uploadFile(Transaction trans) {
     char message[128], buffer[128];
     FILE *file;
 
+    if (isTransactionPending(trans)) return;
+    trans->fop = 'U';
+
     scanf("%s", trans->fname);
 
     tcpConnect(fsip, fsport, &fd_fs, &res_fs);
-    fsConnected = CONNECTION_ON;
+    fsConnected = TRUE;
     if ((file = fopen(trans->fname, "r")) == NULL) {
         printf("Error: file %s does not exist\n", trans->fname);
         closeFSconnection();
@@ -284,12 +344,18 @@ void uploadFile(Transaction trans) {
         if (n == -1) errorExit("write()");
     }
     fclose(file);
+    trans->pending = TRUE;
 }
 
-void uploadFileReply() {
+void uploadFileReply(Transaction trans) {
     char status[64];
 
     readUntilSpace(fd_fs, status);
+
+    if (trans->fop != 'U') {
+        printf("Error: operation not requested received\n");
+        closeConnections();
+    }
 
     if (!strcmp(status, "OK")) {
         printf("Upload Sucessful\n");
@@ -316,19 +382,28 @@ void deleteFile(Transaction trans) {
     int n;
     char message[128];
 
+    if (isTransactionPending(trans)) return;
+    trans->fop = 'D';
+
     scanf("%s", trans->fname);
 
     tcpConnect(fsip, fsport, &fd_fs, &res_fs);
-    fsConnected = CONNECTION_ON;
+    fsConnected = TRUE;
     sprintf(message, "DEL %s %s %s\n", uid, trans->tid, trans->fname);
     n = write(fd_fs, message, strlen(message));
     if (n == -1) errorExit("write()");
+    trans->pending = TRUE;
 }
 
-void deleteFileReply() {
+void deleteFileReply(Transaction trans) {
     char status[64];
 
     readUntilSpace(fd_fs, status);
+
+    if (trans->fop != 'D') {
+        printf("Error: operation not requested received\n");
+        closeConnections();
+    }
 
     if (!strcmp(status, "OK")) {
         printf("Delete Sucessful\n");
@@ -355,17 +430,27 @@ void removeUser(Transaction trans) {
     int n;
     char message[128];
 
+    if (isTransactionPending(trans)) return;
+    trans->fop = 'X';
+    trans->pending = TRUE;
+
     tcpConnect(fsip, fsport, &fd_fs, &res_fs);
-    fsConnected = CONNECTION_ON;
+    fsConnected = TRUE;
     sprintf(message, "REM %s %s\n", uid, trans->tid);
     n = write(fd_fs, message, strlen(message));
     if (n == -1) errorExit("write()");
+    trans->pending = TRUE;
 }
 
-void removeUserReply() {
+void removeUserReply(Transaction trans) {
     char status[64];
 
     readUntilSpace(fd_fs, status);
+
+    if (trans->fop != 'X') {
+        printf("Error: operation not requested received\n");
+        closeConnections();
+    }
 
     if (!strcmp(status, "OK")) {
         printf("Remove Sucessful\n");
@@ -387,7 +472,7 @@ void removeUserReply() {
 /*      === main code ===        */
 
 void fdManager(Request req, Transaction trans) {
-    char command[6], status[5];
+    char command[6], status[5], tmpUid[7], tmpPass[10];
 
     int n, maxfdp1;
 
@@ -409,8 +494,14 @@ void fdManager(Request req, Transaction trans) {
         if (FD_ISSET(STDIN, &rset)) {
             scanf("%s", command);
 
+            if (strcmp(command, "login") && asConnected == FALSE) {
+                readGarbage();
+                printf("Error: first please login\n");
+                continue;
+            }
+
             if (!strcmp(command, "login")) {
-                login();
+                login(tmpUid, tmpPass);
             } else if (!strcmp(command, "req")) {
                 requestFile(req);
             } else if (!strcmp(command, "val")) {
@@ -440,26 +531,33 @@ void fdManager(Request req, Transaction trans) {
             readUntilSpace(fd_as, status);
 
             if (!strcmp(command, "RLO")) {
-                if (!strcmp(status, "OK"))
+                if (!strcmp(status, "OK")) {
                     printf("You are now logged in\n");
-                else if (!strcmp(status, "NOK"))
+                    strcpy(uid, tmpUid);
+                    strcpy(pass, tmpPass);
+                    asConnected = TRUE;
+                } else if (!strcmp(status, "NOK"))
                     printf("Error: login unsuccessful\n");
             } else if (!strcmp(command, "RRQ")) {
                 if (!strcmp(status, "OK")) {
                     printf("Request successful\n");
-                } else if (!strcmp(status, "ELOG"))
-                    printf("Error: this user is not logged in\n");
-                else if (!strcmp(status, "EPD"))
-                    printf("Error: could not communicate with PD\n");
-                else if (!strcmp(status, "EUSER"))
-                    printf("Error: the UID is incorrect\n");
-                else if (!strcmp(status, "EFOP"))
-                    printf("Error: FOP is invalid");
+                } else {
+                    req->pending = FALSE;
+                    if (!strcmp(status, "ELOG"))
+                        printf("Error: this user is not logged in\n");
+                    else if (!strcmp(status, "EPD"))
+                        printf("Error: could not communicate with PD\n");
+                    else if (!strcmp(status, "EUSER"))
+                        printf("Error: the UID is incorrect\n");
+                    else if (!strcmp(status, "EFOP"))
+                        printf("Error: FOP is invalid");
+                }
             } else if (!strcmp(command, "RAU")) {
                 if (!strcmp(status, "0"))
-                    printf("Error: authentication unsuccessful");
+                    printf("Error: authentication unsuccessful\n");
                 else {
                     printf("Authenticated  |   TID = %s\n", status);
+                    req->pending = FALSE;
                     strcpy(trans->tid, status);
                 }
             } else if (!strcmp(command, "ERR")) {
@@ -470,7 +568,7 @@ void fdManager(Request req, Transaction trans) {
             }
         }
 
-        if (fsConnected == CONNECTION_OFF) continue;
+        if (fsConnected == FALSE) continue;
         if (FD_ISSET(fd_fs, &rset)) {
             char typeMsg[4];
             n = read(fd_fs, typeMsg, 4); // read type + space
@@ -482,16 +580,22 @@ void fdManager(Request req, Transaction trans) {
             }
             typeMsg[3] = '\0';
 
+            if (trans->pending == FALSE) {
+                printf("Error: operation not requested received\n");
+                closeConnections();
+            }
+            trans->pending = FALSE;
+
             if (!strcmp(typeMsg, "RLS"))
-                listFilesReply();
+                listFilesReply(trans);
             else if (!strcmp(typeMsg, "RRT"))
                 retrieveFileReply(trans);
             else if (!strcmp(typeMsg, "RUP"))
-                uploadFileReply();
+                uploadFileReply(trans);
             else if (!strcmp(typeMsg, "RDL"))
-                deleteFileReply();
+                deleteFileReply(trans);
             else if (!strcmp(typeMsg, "RRM"))
-                removeUserReply();
+                removeUserReply(trans);
             else {
                 printf("Error: unexpected answer from FS\n");
                 closeConnections();
@@ -540,9 +644,12 @@ int main(int argc, char *argv[]) {
     Request req = (Request)malloc(sizeof(struct request));
     strcpy(req->rid, "0000");
     req->fop = 'E';
+    req->pending = FALSE;
+
     Transaction trans = (Transaction)malloc(sizeof(struct transaction));
     strcpy(trans->tid, "0000");
     trans->fop = 'E';
+    trans->pending = FALSE;
 
     fdManager(req, trans);
 
