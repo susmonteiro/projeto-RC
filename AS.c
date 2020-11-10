@@ -19,6 +19,9 @@
 #define MAXARGS 4
 #define MINARGS 1
 
+#define TRUE  1
+#define FALSE 0
+
 #define MAX(a, b) a *(a > b) + b *(b >= a)
 
 typedef struct user {
@@ -46,6 +49,7 @@ fd_set rset;
 socklen_t addrlen_udp, addrlen_tcp;
 struct addrinfo hints_udp, *res_udp, hints_tcp, *res_tcp;
 struct sockaddr_in addr_udp, addr_tcp;
+int connected = FALSE;
 
 char asport[8];
 
@@ -55,7 +59,7 @@ void printv(char *message) {
 }
 
 char *login(User userInfo, char *uid, char *pass) {
-    char message[64], path[32], currentPass[32];
+    char message[64], path[64], currentPass[32];
     FILE *file;
 
     sprintf(path, "USERS/UID%s/UID%s_pass.txt", uid, uid);
@@ -81,26 +85,28 @@ char *login(User userInfo, char *uid, char *pass) {
 }
 
 char *request(User userInfo, char *uid, char *rid, char *fop, char *fname) {
-    char buffer[64], path[32], pdport[32], pdip[32], vc[5];
+    char buffer[64], path[64], pdport[32], pdip[32], vc[5];
     int n, i, fd;
     FILE *file;
     struct addrinfo *res;
 
-    if (strcmp(fop, "F") && strcmp(fop, "R") && strcmp(fop, "U") && strcmp(fop, "D") && strcmp(fop, "X"))
-        return "EFOP\n";
+    if (strcmp(fop, "F") && strcmp(fop, "R") && strcmp(fop, "U") && strcmp(fop, "D") && strcmp(fop, "X") && strcmp(fop, "L"))
+        return "RRQ EFOP\n";
 
     sprintf(path, "USERS/UID%s/UID%s_login.txt", uid, uid);
     if (access(path, F_OK) == -1)
         return "RRQ ELOG\n";
 
     if (strcmp(userInfo->uid, uid))
-        return "EUSER\n";
+        return "RRQ EUSER\n";
 
     sprintf(path, "USERS/UID%s/UID%s_reg.txt", uid, uid);
     if ((file = fopen(path, "r")) == NULL)
-        return "EPD\n";
+        return "RRQ EPD\n";
     fscanf(file, "%s\n%s", pdip, pdport);
     fclose(file);
+
+    printf("%s %s\n", pdip, pdport);
 
     udpConnect(pdip, pdport, &fd, &res);
 
@@ -122,11 +128,8 @@ char *request(User userInfo, char *uid, char *rid, char *fop, char *fname) {
 
     recvfrom(fd, buffer, 32, 0, (struct sockaddr *)&addr_udp, &addrlen_udp);
 
-    close(fd);
-    freeaddrinfo(res_udp);
-
     if (!strcmp(buffer, "RVC NOK\n"))
-        return "EPD\n";
+        return "RRQ EPD\n";
 
     for (i = 0; i < numRequests + 1; i++) {
         if (requests[i] == NULL) {
@@ -139,17 +142,26 @@ char *request(User userInfo, char *uid, char *rid, char *fop, char *fname) {
             break;
         }
     }
-    if (i == numRequests)
-        requests = (Request *)realloc(requests, sizeof(Request) * (++numRequests));
+    if (i == numRequests) {
+        numRequests++;
+        requests = (Request *)realloc(requests, sizeof(Request) * (numRequests+1));
+        users[numClients] = NULL;
+    }
+
+    close(fd);
+    freeaddrinfo(res);
 
     return "RRQ OK\n";
 }
 
 char *secondAuth(char *uid, char *rid, char *vc) {
     int i;
-    char message[64], tid[5], *buffer = malloc(sizeof(char) * 32);
+    char message[64], tid[5];
+    char* buffer;
+    
+    buffer = (char*)malloc(sizeof(char) * 32);
 
-    for (i = 0; i < numRequests; i++) {
+    for (i = 0; i < numRequests+1; i++) {
         if (!strcmp(requests[i]->rid, rid))
             break;
     }
@@ -160,11 +172,15 @@ char *secondAuth(char *uid, char *rid, char *vc) {
     sprintf(tid, "%04d", rand() % 10000);
     strcpy(requests[i]->tid, tid);
 
-    printv("unimplemented\n");
     sprintf(message, "User: UID=%s", uid);
     printv(message);
-    sprintf(message, "U, f1.txt, TID=%s", tid); //possivelmente vamos ter que criar um vetor de estruturas que guardam file requests para guardar os opcodes e assim (com id rid por ex.)
-    printv(message);
+    if (!strcmp(requests[i]->fop, "R") || !strcmp(requests[i]->fop, "U") || !strcmp(requests[i]->fop, "D")) {
+        sprintf(message, "%s, %s, TID=%s", requests[i]->fop, requests[i]->fname, tid);
+        printv(message);
+    } else {
+        sprintf(message, "%s, TID=%s", requests[i]->fop, tid);
+        printv(message);
+    }
 
     sprintf(buffer, "RAU %s\n", tid);
     return buffer;
@@ -179,7 +195,6 @@ void userSession(User userInfo) {
         printError("userSession: read()");
     } else if (n == 0) {
         close(userInfo->fd);
-
         if (strlen(userInfo->uid) > 0) {
             sprintf(path, "USERS/UID%s/UID%s_login.txt", userInfo->uid, userInfo->uid);
             remove(path);
@@ -209,7 +224,7 @@ void userSession(User userInfo) {
 }
 
 char *registration(char *uid, char *pass, char *pdip_new, char *pdport_new) {
-    char message[64], path[32], currentPass[32];
+    char message[64], path[64], currentPass[32];
     FILE *file;
 
     sprintf(path, "USERS/UID%s/UID%s_pass.txt", uid, uid);
@@ -238,7 +253,7 @@ char *registration(char *uid, char *pass, char *pdip_new, char *pdport_new) {
 }
 
 char *unregistration(char *uid, char *pass) {
-    char path[32], currentPass[32];
+    char path[64], currentPass[32];
     FILE *file;
 
     sprintf(path, "USERS/UID%s/UID%s_pass.txt", uid, uid);
@@ -283,18 +298,26 @@ char *applyCommand(char *message) {
     }
 }
 
+void freePDconnection() {
+    printf("Exiting...\n");
+    freeaddrinfo(res_udp);
+    close(fd_udp);
+    exit(0);
+}
+
 void endAS() {
     int i = 0;
-
-    freeaddrinfo(res_udp);
     // freeaddrinfo(res_udp_client);
-    close(fd_udp);
     // close(fd_udp_client);
     freeaddrinfo(res_tcp);
     close(fd_tcp);
-    for (i = 0; i < numClients; i++)
-        close(users[i]->fd);
-    exit(0);
+    for (i = 0; i < numClients; i++) {
+        if (users[i] != NULL) {
+            printf("5\n");
+            close(users[i]->fd);
+        }
+    }
+    freePDconnection();
 }
 
 int main(int argc, char *argv[]) {
@@ -327,9 +350,13 @@ int main(int argc, char *argv[]) {
     if (listen(fd_tcp, 5) == -1) printError("TCP: listen()");
 
     users = (User *)malloc(sizeof(User));
+    users[0] = NULL;
+
     requests = (Request *)malloc(sizeof(Request));
+    requests[0] = NULL;
 
     udpOpenConnection(asport, &fd_udp, &res_udp);
+    connected = TRUE;
     addrlen_udp = sizeof(addr_udp);
 
     signal(SIGINT, endAS);
@@ -341,7 +368,7 @@ int main(int argc, char *argv[]) {
         FD_SET(fd_tcp, &rset);
 
         for (i = 0; i < numClients; i++) {
-            if (users[i]->fd != -5)
+            if (users[i] != NULL)
                 FD_SET(users[i]->fd, &rset);
         }
 
@@ -366,15 +393,16 @@ int main(int argc, char *argv[]) {
             for (i = 0; i < numClients + 1; i++) {
                 if (users[i] == NULL) {
                     users[i] = (User)malloc(sizeof(struct user));
-                    if ((users[i]->fd = accept(fd_tcp, (struct sockaddr *)&addr_tcp, &addrlen_tcp)) == -1)
-                        printError("main: accept()");
+                    if ((users[i]->fd = accept(fd_tcp, (struct sockaddr *)&addr_tcp, &addrlen_tcp)) == -1) printError("main: accept()");
                     break;
                 }
             }
-            if (i == numClients)
-                users = (User *)realloc(users, sizeof(User) * (++numClients));
+            if (i == numClients) {
+                numClients++;
+                users = (User *)realloc(users, sizeof(User) * (numClients+1));
+                users[numClients] = NULL;
+            }
         }
-
         for (i = 0; i < numClients; i++) {
             if (FD_ISSET(users[i]->fd, &rset)) {
                 userSession(users[i]);
