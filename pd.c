@@ -32,7 +32,6 @@ The PD application can also receive a command to exit, unregistering the user.
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include <time.h>
 #include <unistd.h>
 
 #define MAXARGS 8
@@ -274,8 +273,6 @@ int main(int argc, char *argv[]) {
             strcpy(asport, argv[++i]);
         }
     }
-
-    srand(time(NULL));
 
     udpOpenConnection(pdport, &fd_udp, &res_udp);
     addrlen_udp = sizeof(addr_udp);
