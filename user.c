@@ -109,7 +109,7 @@ void requestFile(Request req) {
 
     sprintf(req->rid, "%04d", rand() % 10000);
 
-    scanf("%c", &req->fop);
+    scanf(" %c", &req->fop);
     switch (req->fop) {
     case 'L':
     case 'X':
@@ -207,8 +207,8 @@ void retrieveFile(Transaction trans) {
 }
 
 void retrieveFileReply(Transaction trans) {
-    char status[64], buffer[128], fsize[32];
-    int n;
+    char c, status[64], fsize[32];
+    int n, i, numChars;
     FILE *file;
 
     readUntilSpace(fd_fs, status);
@@ -234,6 +234,7 @@ void retrieveFileReply(Transaction trans) {
 
     readUntilSpace(fd_fs, fsize);
     printf("File size: %s Bytes\n", fsize);
+    numChars = atoi(fsize);
 
     if (access(trans->fname, F_OK) != -1) {
         printf("Error: file %s already exists\n", trans->fname);
@@ -242,8 +243,8 @@ void retrieveFileReply(Transaction trans) {
         file = fopen(trans->fname, "w");
     }
 
-    do {
-        n = read(fd_fs, buffer, 128);
+    for (i = 0; i < numChars; i++) {
+        n = read(fd_fs, &c, 1);
         if (n == -1)
             errorExit("read()");
         else if (n == 0) {
@@ -251,8 +252,8 @@ void retrieveFileReply(Transaction trans) {
             closeConnections();
         }
         if (file != NULL)
-            fputs(buffer, (FILE *)file);
-    } while (n == 128 && buffer[127] != '\n');
+            fputc(c, (FILE *)file);
+    }
 }
 
 void uploadFile(Transaction trans) {
@@ -461,6 +462,8 @@ void fdManager(Request req, Transaction trans) {
                     printf("Authenticated  |   TID = %s\n", status);
                     strcpy(trans->tid, status);
                 }
+            } else if (!strcmp(command, "ERR")) {
+                printf("Error: AS replied with ERR");
             } else {
                 printf("Error: unexpected answer from AS\n");
                 closeConnections();
