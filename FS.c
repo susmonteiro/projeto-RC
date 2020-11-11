@@ -71,6 +71,7 @@ void endFS() {
 
 void readUntilSpace(int ind, char *buffer) { // TODO function common to other files?
     char c;
+    char path[64];
     int i = 0, n = 0;
     do {
         n = read(users[ind]->fd, &c, 1);
@@ -79,6 +80,12 @@ void readUntilSpace(int ind, char *buffer) { // TODO function common to other fi
         else if (n == 0) {
             printf("Error: user closed\n");
             close(users[ind]->fd);
+
+            if (strlen(users[ind]->uid) > 0) {
+                sprintf(path, "USERS/UID%s/UID%s_login.txt", users[ind]->uid, users[ind]->uid);
+                remove(path);
+            }
+
             users[ind] = NULL;
             return;
         }
@@ -112,18 +119,33 @@ void sendNokReply(int fd, Transaction transaction) {
 
 void listFiles(int fd, Transaction transaction) {
     DIR *d;
-    char dirname[32], message[128], files[400], reply[400];
+    FILE *file;
+    char dirname[32], message[128], files[400], reply[400], filename[64];
     struct dirent *dir;
-    struct stat st;
-    int n_files = 0;
+    int fsize, n_files = 0;
     sprintf(dirname, "USERS/UID%s", transaction->uid);
     d = opendir(dirname);
     if (d) {
         while((dir=readdir(d)) != NULL) {
-            stat(dir->d_name, &st);
-            sprintf(message, "%s %lld ", dir->d_name, st.st_size);
-            strcat(files, message);
-            n_files++;
+            if (dir->d_name[0] != '.') {
+                // TODO: not working, don't know why
+                sprintf(filename, "%s/%s", dirname, dir->d_name);
+                if (access(filename, F_OK) != -1) {
+                    printf("%s\n", dir->d_name);
+                    file = fopen(filename, "r");
+                    fseek(file, 0, SEEK_END);
+                    fsize = ftell(file);
+                    fseek(file, 0, SEEK_SET);
+                    sprintf(message, "%s %d ", dir->d_name, fsize);
+                    if (n_files == 0)
+                        strcpy(files, message);
+                    else
+                        strcat(files, message);
+                    printf("%s\n", files);
+                    n_files++;
+                    fclose(file);
+                }
+            }
         }
         closedir(d);
     }
@@ -133,7 +155,9 @@ void listFiles(int fd, Transaction transaction) {
         sprintf(message, "list operation successful for UID=%s", transaction->uid);
         printv(message);
         sprintf(reply, "RLS %d %s\n", n_files, files);
-        write(fd, reply, strlen(reply)-1);
+        
+        printv(reply);
+        write(fd, reply, strlen(reply));
     }
 }
 
@@ -267,21 +291,22 @@ void userSession(int ind) {
     //printv(msg);
     //END OF DEBUG
 
+    strcpy(users[ind]->uid, uid);
+
     for (i = 0; i < numTransactions + 1; i++) {
         if (transactions[i] == NULL) {
             transactions[i] = (Transaction)malloc(sizeof(struct transaction));
+            strcpy(transactions[i]->uid, uid);
+            strcpy(transactions[i]->tid, tid);
             break;
         }
     }
-    if (i == numClients)
-        transactions = (Transaction *)realloc(transactions, sizeof(Transaction) * (++numClients));
-
+    if (i == numTransactions) {
+        numTransactions++;
+        transactions = (Transaction *)realloc(transactions, sizeof(Transaction) * (numTransactions+1));
+        transactions[numTransactions] = NULL;
+    }
     //sscanf(buffer, "%s %s %s", command, uid, tid);
-    strcpy(users[ind]->uid, uid);
-    users[ind]->uid[5] = '\0';
-
-    strcpy(transactions[i]->uid, uid);
-    strcpy(transactions[i]->tid, tid);
 
     if (!strcmp(command, "RTV") || !strcmp(command, "DEL")) {
         if (!strcmp(command, "RTV")) {
@@ -294,7 +319,7 @@ void userSession(int ind) {
         }
         readUntilSpace(ind, fname);
         //sscanf(buffer, "%s %s %s %s", command, uid, tid, fname);
-        sprintf(buffer, "UID=%s: %s %s\n", uid, type, fname);
+        sprintf(buffer, "UID=%s: %s %s", uid, type, fname);
 
         strcpy(transactions[i]->fname, fname);
 
@@ -302,7 +327,7 @@ void userSession(int ind) {
         readUntilSpace(ind, fname);
         readUntilSpace(ind, fsize);
         //sscanf(buffer, "%s %s %s %s %s", command, uid, tid, fname, fsize);
-        sprintf(buffer, "UID=%s: upload %s (%s Bytes)\n", uid, fname, fsize);
+        sprintf(buffer, "UID=%s: upload %s (%s Bytes)", uid, fname, fsize);
         strcpy(transactions[i]->fop, "U");
         strcpy(transactions[i]->fname, fname);
         strcpy(transactions[i]->fsize, fsize);
@@ -314,11 +339,11 @@ void userSession(int ind) {
             strcpy(type, "remove");
             strcpy(transactions[i]->fop, "X");
         }
-        sprintf(buffer, "UID=%s: %s\n", uid, type);
+        sprintf(buffer, "UID=%s: %s", uid, type);
     }
 
     printv(buffer);
-    sprintf(message, "VLD %s %s", uid, tid);
+    sprintf(message, "VLD %s %s\n", uid, tid);
     n = sendto(fd_udp, message, strlen(message), 0, res_udp->ai_addr, res_udp->ai_addrlen);
     if (n == -1) printError("validateOperation: sendto()");
 }
@@ -357,7 +382,7 @@ void doOperation(char *buffer) {
             if (!strcmp(tid, transactions[i]->tid))
                 break;
         }
-        if (i == numTransactions - 1) {
+        if (i == numTransactions) {
             printv("Error: Transaction was not found");
             return ;
         }
@@ -369,7 +394,7 @@ void doOperation(char *buffer) {
             }
         }
 
-        if (j == numClients - 1) {
+        if (j == numClients) {
             printv("Error: User does not exist");
             for (j = 0; j < numClients; j++) {
                 if (!strcmp(users[j]->uid, transactions[i]->uid)) {
@@ -378,8 +403,6 @@ void doOperation(char *buffer) {
                 }
             }
         }
-
-        // TODO pass transactions[i] to all following functions instead of current parameters
 
         switch (fop) {
         case 'L':
@@ -417,25 +440,30 @@ void fdManager() {
         FD_ZERO(&rset);
         FD_SET(fd_udp, &rset);
         FD_SET(fd_tcp, &rset);
-
+        printf("estou\n");
         for (i = 0; i < numClients; i++) {
-            if (users[i] != NULL)
+            if (users[i] != NULL) {
+                printf("aqui\n");
                 FD_SET(users[i]->fd, &rset);
+            }
         }
 
-        maxfdp1 = MAX(fd_tcp, fd_udp) + 1;
+        maxfdp1 = MAX(fd_tcp, fd_udp);
 
         for (i = 0; i < numClients; i++) {
-            maxfdp1 = MAX(maxfdp1, users[i]->fd) + 1;
+            maxfdp1 = MAX(maxfdp1, users[i]->fd);
         }
+
+        maxfdp1++;
 
         select(maxfdp1, &rset, NULL, NULL, NULL);
 
         if (FD_ISSET(fd_udp, &rset)) { // receive message from AS
+            printf("entrei chica\n");
             n = recvfrom(fd_udp, buffer, 128, 0, (struct sockaddr *)&addr_udp, &addrlen_udp);
             if (n == -1) printError("main: recvfrom()");
             buffer[n] = '\0';
-            printv("received message from as"); //DEBUG
+            printf("received message from as\n"); //DEBUG
 
             doOperation(buffer);
         }
@@ -460,6 +488,7 @@ void fdManager() {
 
         for (i = 0; i < numClients; i++) { // receive command from User
             if (FD_ISSET(users[i]->fd, &rset)) {
+                printf("entrei no ciclo\n");
                 userSession(i);
             }
         }
@@ -505,6 +534,9 @@ int main(int argc, char *argv[]) {
     users = (User *)malloc(sizeof(User));
     users[0] = NULL;
 
+    transactions = (Transaction *)malloc(sizeof(Transaction));
+    transactions[0] = NULL;
+
     printv("tcp connection open"); // DEBUG
 
     signal(SIGINT, endFS);
@@ -513,3 +545,4 @@ int main(int argc, char *argv[]) {
 
     return 0;
 }
+

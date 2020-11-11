@@ -31,13 +31,6 @@
 
 int fsConnected = FALSE, asConnected = FALSE;
 
-int fd_as, fd_fs;
-fd_set rset;
-struct addrinfo *res_as, *res_fs;
-
-char fsip[32], fsport[8], asip[32], asport[8];
-char uid[6], pass[9];
-
 typedef struct request {
     char rid[5];
     char fop;
@@ -50,6 +43,15 @@ typedef struct transaction {
     char fname[32];
     int pending;
 } * Transaction;
+
+int fd_as, fd_fs;
+fd_set rset;
+struct addrinfo *res_as, *res_fs;
+
+char fsip[32], fsport[8], asip[32], asport[8];
+char uid[6], pass[9];
+Request req;
+Transaction trans;
 
 /*      === end User ===       */
 
@@ -70,6 +72,8 @@ void closeFSconnection() {
 void closeConnections() {
     closeASconnection();
     closeFSconnection();
+    free(req);
+    free(trans);
     exit(0);
 }
 
@@ -232,6 +236,7 @@ void listFilesReply(Transaction trans) {
         readUntilSpace(fd_fs, fsize);
         printf("%d)\t%24s\t%10s Bytes\n", i, filename, fsize);
     }
+    read(fd_fs, filename, 1);
 }
 
 void retrieveFile(Transaction trans) {
@@ -311,6 +316,7 @@ void retrieveFileReply(Transaction trans) {
         if (file != NULL)
             fputc(c, (FILE *)file);
     }
+    if (file != NULL) fclose(file);
 }
 
 void uploadFile(Transaction trans) {
@@ -644,12 +650,12 @@ int main(int argc, char *argv[]) {
     signal(SIGINT, closeConnections);
     signal(SIGPIPE, closeConnections);
 
-    Request req = (Request)malloc(sizeof(struct request));
+    req = (Request)malloc(sizeof(struct request));
     strcpy(req->rid, "0000");
     req->fop = 'E';
     req->pending = FALSE;
 
-    Transaction trans = (Transaction)malloc(sizeof(struct transaction));
+    trans = (Transaction)malloc(sizeof(struct transaction));
     strcpy(trans->tid, "0000");
     trans->fop = 'E';
     trans->pending = FALSE;

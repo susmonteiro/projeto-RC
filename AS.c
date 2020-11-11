@@ -145,7 +145,7 @@ char *request(User userInfo, char *uid, char *rid, char *fop, char *fname) {
     if (i == numRequests) {
         numRequests++;
         requests = (Request *)realloc(requests, sizeof(Request) * (numRequests+1));
-        users[numClients] = NULL;
+        requests[numRequests] = NULL;
     }
 
     close(fd);
@@ -161,9 +161,10 @@ char *secondAuth(char *uid, char *rid, char *vc) {
     
     buffer = (char*)malloc(sizeof(char) * 32);
 
-    for (i = 0; i < numRequests+1; i++) {
-        if (!strcmp(requests[i]->rid, rid))
+    for (i = 0; i < numRequests; i++) {
+        if (!strcmp(requests[i]->rid, rid)) {
             break;
+        }
     }
 
     if (i == numRequests || strcmp(requests[i]->vc, vc))
@@ -272,12 +273,49 @@ char *unregistration(char *uid, char *pass) {
 
 char *validateOperation(char *uid, char *tid) {
     //TO DO (Rodrigo)
-    char message[128];
+    int i, j;
+    char message[128], error[128];
     char *reply;
-    sprintf(message, "User: UID=%s Fop [Fname], TID=%s", uid, tid);
-    printv(message);
+    char fop = 'A';
+
     reply = (char *)malloc(128 * sizeof(char));
-    sprintf(reply, "CNF %s %s Fop [Fname]\n", uid, tid);
+
+    for (i = 0; i < numRequests; i++) {
+        if (!strcmp(tid, requests[i]->tid))
+            break;
+    }
+    if (i == numRequests) {
+        sprintf(error, "Error: Request was not found for TID=%s", tid);
+        printv(error);
+        fop = 'E';
+    }
+    for (j = 0; j < numClients; j++) {
+        if (!strcmp(users[j]->uid, uid)) {
+            break;
+        }
+    }
+    if (j == numClients) {
+        sprintf(error, "Error: Request was not found for UID=%s", uid);
+        printv(error);
+        for (j = 0; j < numClients; j++) {
+            if (!strcmp(users[j]->uid, requests[i]->uid)) {
+                fop = 'E';
+                break;
+            }
+        }
+    }
+
+    if (fop != 'E') fop = requests[i]->fop[0];
+
+    if(fop == 'R' || fop == 'U' || fop == 'D') {
+        sprintf(message, "User: UID=%s %c %s, TID=%s", uid, fop, requests[i]->fname, tid);
+        printv(message);
+        sprintf(reply, "CNF %s %s %c %s\n", uid, tid, fop, requests[i]->fname);
+    } else {
+        sprintf(message, "User: UID=%s %c TID=%s", uid, fop, tid);
+        printv(message);
+        sprintf(reply, "CNF %s %s %c\n", uid, tid, fop);
+    }
     return reply;
 }
 
@@ -313,7 +351,6 @@ void endAS() {
     close(fd_tcp);
     for (i = 0; i < numClients; i++) {
         if (users[i] != NULL) {
-            printf("5\n");
             close(users[i]->fd);
         }
     }
