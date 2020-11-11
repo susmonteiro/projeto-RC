@@ -71,6 +71,7 @@ void endFS() {
 
 void readUntilSpace(int ind, char *buffer) { // TODO function common to other files?
     char c;
+    char path[64];
     int i = 0, n = 0;
     do {
         n = read(users[ind]->fd, &c, 1);
@@ -79,6 +80,12 @@ void readUntilSpace(int ind, char *buffer) { // TODO function common to other fi
         else if (n == 0) {
             printf("Error: user closed\n");
             close(users[ind]->fd);
+
+            if (strlen(users[ind]->uid) > 0) {
+                sprintf(path, "USERS/UID%s/UID%s_login.txt", users[ind]->uid, users[ind]->uid);
+                remove(path);
+            }
+
             users[ind] = NULL;
             return;
         }
@@ -113,7 +120,7 @@ void sendNokReply(int fd, Transaction transaction) {
 void listFiles(int fd, Transaction transaction) {
     DIR *d;
     FILE *file;
-    char dirname[32], message[128], files[400], reply[400], filename[32];
+    char dirname[32], message[128], files[400], reply[400], filename[64];
     struct dirent *dir;
     int fsize, n_files = 0;
     sprintf(dirname, "USERS/UID%s", transaction->uid);
@@ -122,15 +129,22 @@ void listFiles(int fd, Transaction transaction) {
         while((dir=readdir(d)) != NULL) {
             if (dir->d_name[0] != '.') {
                 // TODO: not working, don't know why
-                strcpy(filename, dir->d_name);
-                file = fopen(filename, "r");
-                fseek(file, 0, SEEK_END);
-                fsize = ftell(file);
-                fseek(file, 0, SEEK_SET);
-                sprintf(message, "%s %d ", filename, fsize);
-                strcat(files, message);
-                n_files++;
-                fclose(file);
+                sprintf(filename, "%s/%s", dirname, dir->d_name);
+                if (access(filename, F_OK) != -1) {
+                    printf("%s\n", dir->d_name);
+                    file = fopen(filename, "r");
+                    fseek(file, 0, SEEK_END);
+                    fsize = ftell(file);
+                    fseek(file, 0, SEEK_SET);
+                    sprintf(message, "%s %d ", dir->d_name, fsize);
+                    if (n_files == 0)
+                        strcpy(files, message);
+                    else
+                        strcat(files, message);
+                    printf("%s\n", files);
+                    n_files++;
+                    fclose(file);
+                }
             }
         }
         closedir(d);
@@ -141,7 +155,9 @@ void listFiles(int fd, Transaction transaction) {
         sprintf(message, "list operation successful for UID=%s", transaction->uid);
         printv(message);
         sprintf(reply, "RLS %d %s\n", n_files, files);
-        write(fd, reply, strlen(reply)-1);
+        
+        printv(reply);
+        write(fd, reply, strlen(reply));
     }
 }
 
@@ -529,3 +545,4 @@ int main(int argc, char *argv[]) {
 
     return 0;
 }
+
