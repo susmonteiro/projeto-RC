@@ -2,5 +2,6 @@ UseTab: false
 IndentWidth: 4
 BreakBeforeBraces: Attach
 AllowShortIfStatementsOnASingleLine: true
-IndentCaseLabels: false
+AllowShortLoopsOnASingleLine: true
+IndentCaseLabels: true
 ColumnLimit: 0
