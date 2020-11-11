@@ -167,10 +167,10 @@ char *validateRequest(char *message) {
         }
         if (op == 'R' || op == 'U' || op == 'D') {
             sscanf(message, "%s %s %s %c %s", command, uid, vc, &op, fname);
-            printf("Operation: %s %s    |   VC = %s\n", type, fname, vc);
+            printf("Operation: %s %s\nVC = %s\n", type, fname, vc);
         } else {
             sscanf(message, "%s %s %s %c", command, uid, vc, &op);
-            printf("Operation: %s   |   VC = %s\n", type, vc);
+            printf("Operation: %s\nVC = %s\n", type, vc);
         }
         result = (char *)malloc(32 * sizeof(char));
         sprintf(result, "RVC %s OK\n", uid);
