@@ -1,6 +1,6 @@
 CC=gcc
 LD=gcc
-CFLAGS=-Wall -Wextra
+CFLAGS=-g -Wall -Wextra
 LDFLAGS=
 
 all: AS FS pd user
