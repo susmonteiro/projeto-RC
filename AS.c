@@ -327,6 +327,7 @@ char *validateOperation(char *uid, char *tid) {
 char *applyCommand(char *message) {
     char command[5], arg1[32], arg2[32], arg3[32], arg4[32];
     char msg[64];
+    printf("inside applyCommand\n"); //DEBUG
     sprintf(msg, "message from PD or FS: %s", message);
     printv(msg);
     sscanf(message, "%s %s %s %s %s", command, arg1, arg2, arg3, arg4);
@@ -335,6 +336,7 @@ char *applyCommand(char *message) {
     } else if (!strcmp(command, "UNR")) {
         return unregistration(arg1, arg2);
     } else if (!strcmp(command, "VLD")) {
+        printf("going to validate operation\n"); // DEBUG
         return validateOperation(arg1, arg2);
     } else {
         return "ERR\n";
