@@ -9,14 +9,8 @@ The PD application can also receive a command to exit, unregistering the user.
 */
 
 /* ===      TODO in PD      === 
-    - clean function validateRequest
-    - clean repeated code -> for example, both registration and unresgistration functions 
-    handle lastMessage similarly -> can we do it in a smarter way? 
-    - check if PD can only register once. Should we check if there is a uid and pass already assigned? -> I think AS should do that
-    - organize variables
     - do we need all of these includes?
     - check if there are functions common to other files (#define MAX for example)
-    - problem: if a pd is registered twice (the second time not successfully right?), we shouldn't save the uid and pass until we have confirmation from AS
 */
 
 #include "config.h"
@@ -58,11 +52,23 @@ struct sockaddr_in addr_udp;
 
 int numTries = 0;
 int typeMessage = NO_MSG;
+int endPD = FALSE;
+int messageToResend = FALSE;
 char lastMessage[128];
 
 char pdip[32], pdport[8], asip[32], asport[8];
 char uid[6], pass[9];
 int maxfdp1, registered = NOT_REGISTERED;
+
+/*      === sighandler functions ===       */
+
+void resendHandler() {
+    messageToResend = TRUE;
+}
+
+void exitHandler() {
+    endPD = TRUE;
+}
 
 /*      === resend messages that were not acknowledge ===       */
 
@@ -75,6 +81,7 @@ void resetLastMessage() {
 
 void resendMessage() {
     int n;
+    messageToResend = FALSE;
     if (numTries++ > 2) freePD();
     n = sendto(fd_udp_client, lastMessage, strlen(lastMessage) * sizeof(char), 0, res_udp_client->ai_addr, res_udp_client->ai_addrlen);
     if (n == -1) errorExit("sendto()");
@@ -174,7 +181,7 @@ char *validateRequest(char *message) {
         }
         result = (char *)malloc(32 * sizeof(char));
         sprintf(result, "RVC %s OK\n", uid);
-        return result; // TODO tid
+        return result;
     } else {
         return "ERR\n";
     }
@@ -187,6 +194,9 @@ void fdManager() {
     char reply[9], buffer[32], command[6], tmpUid[7], tmpPass[10];
 
     while (1) {
+        if (endPD) exitPD();
+        if (messageToResend) resendMessage();
+
         FD_ZERO(&rset);
         FD_SET(STDIN, &rset);
         FD_SET(fd_udp, &rset);
@@ -261,7 +271,7 @@ int main(int argc, char *argv[]) {
     strcpy(asip, ASIP);
     strcpy(asport, ASPORT);
 
-    for (i = 1; i < argc; i++) {
+    for (i = MINARGS; i < argc; i++) {
         if (!strcmp(argv[i], "-h") || i + 1 >= argc) {
             printf("​Usage: %s PDIP [-d PDport] [-n ASIP] [-p ASport]\n", argv[0]);
             exit(0);
@@ -278,8 +288,8 @@ int main(int argc, char *argv[]) {
     addrlen_udp = sizeof(addr_udp);
     udpConnect(asip, asport, &fd_udp_client, &res_udp_client);
 
-    signal(SIGINT, exitPD);
-    signal(SIGALRM, resendMessage);
+    signal(SIGINT, exitHandler);
+    signal(SIGALRM, resendHandler);
 
     fdManager();
 
