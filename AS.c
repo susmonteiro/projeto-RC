@@ -375,7 +375,7 @@ int main(int argc, char *argv[]) {
     strcpy(asport, ASPORT);
 
     for (i = MINARGS; i < argc; i++) {
-        if (!strcmp(argv[i], "-h")) {
+        if (!strcmp(argv[i], "-h") || i + 1 == argc) {
             printf("​Usage: %s -p [ASport] [-v]\n", argv[0]);
             exit(0);
         } else if (!strcmp(argv[i], "-v")) {

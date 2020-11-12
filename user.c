@@ -629,7 +629,7 @@ int main(int argc, char *argv[]) {
     strcpy(fsport, FSPORT);
 
     for (i = 1; i < argc; i++) {
-        if (!strcmp(argv[i], "-h")) {
+        if (!strcmp(argv[i], "-h") || i + 1 >= argc) {
             printf("​Usage: %s [-n ASIP] [-p ASport] [-m FSIP] [-q FSport]\n", argv[0]);
             exit(0);
         } else if (!strcmp(argv[i], "-n")) {

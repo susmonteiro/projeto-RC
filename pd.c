@@ -149,21 +149,21 @@ char *validateRequest(char *message) {
     sscanf(message, "%s %s %s %c", command, uid, vc, &op);
     if (!strcmp(command, "VLC") && strlen(vc) == 4) {
         switch (op) {
-        case 'L':
-            strcpy(type, "list");
-            break;
-        case 'D':
-            strcpy(type, "delete");
-            break;
-        case 'R':
-            strcpy(type, "retrieve");
-            break;
-        case 'U':
-            strcpy(type, "upload");
-            break;
-        case 'X':
-            strcpy(type, "delete");
-            break;
+            case 'L':
+                strcpy(type, "list");
+                break;
+            case 'D':
+                strcpy(type, "delete");
+                break;
+            case 'R':
+                strcpy(type, "retrieve");
+                break;
+            case 'U':
+                strcpy(type, "upload");
+                break;
+            case 'X':
+                strcpy(type, "delete");
+                break;
         }
         if (op == 'R' || op == 'U' || op == 'D') {
             sscanf(message, "%s %s %s %c %s", command, uid, vc, &op, fname);
@@ -262,7 +262,7 @@ int main(int argc, char *argv[]) {
     strcpy(asport, ASPORT);
 
     for (i = 1; i < argc; i++) {
-        if (!strcmp(argv[i], "-h")) {
+        if (!strcmp(argv[i], "-h") || i + 1 >= argc) {
             printf("​Usage: %s PDIP [-d PDport] [-n ASIP] [-p ASport]\n", argv[0]);
             exit(0);
         } else if (!strcmp(argv[i], "-d")) {
