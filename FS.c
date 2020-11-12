@@ -71,7 +71,7 @@ void endFS() {
 
 void readUntilSpace(int ind, char *buffer) { // TODO function common to other files?
     char c;
-    char path[64];
+    //char path[64];
     int i = 0, n = 0;
     do {
         n = read(users[ind]->fd, &c, 1);
@@ -80,12 +80,11 @@ void readUntilSpace(int ind, char *buffer) { // TODO function common to other fi
         else if (n == 0) {
             printf("Error: user closed\n");
             close(users[ind]->fd);
-
-            if (strlen(users[ind]->uid) > 0) {
+            // Acho que o user nao faz logout sempre que realiza uma operacao
+            /*if (strlen(users[ind]->uid) > 0) {
                 sprintf(path, "USERS/UID%s/UID%s_login.txt", users[ind]->uid, users[ind]->uid);
                 remove(path);
-            }
-
+            }*/
             users[ind] = NULL;
             return;
         }
@@ -120,7 +119,7 @@ void sendNokReply(int fd, Transaction transaction) {
 void listFiles(int fd, Transaction transaction) {
     DIR *d;
     FILE *file;
-    char dirname[32], message[128], files[400], reply[400], filename[64];
+    char dirname[32], message[270], files[400], reply[400], filename[260];
     struct dirent *dir;
     int fsize, n_files = 0;
     sprintf(dirname, "USERS/UID%s", transaction->uid);
@@ -128,7 +127,6 @@ void listFiles(int fd, Transaction transaction) {
     if (d) {
         while((dir=readdir(d)) != NULL) {
             if (dir->d_name[0] != '.') {
-                // TODO: not working, don't know why
                 sprintf(filename, "%s/%s", dirname, dir->d_name);
                 if (access(filename, F_OK) != -1) {
                     printf("%s\n", dir->d_name);
@@ -155,7 +153,6 @@ void listFiles(int fd, Transaction transaction) {
         sprintf(message, "list operation successful for UID=%s", transaction->uid);
         printv(message);
         sprintf(reply, "RLS %d %s\n", n_files, files);
-        
         printv(reply);
         write(fd, reply, strlen(reply));
     }
@@ -373,9 +370,11 @@ void sendInvReply(Transaction transaction) {
 }
 
 void doOperation(char *buffer) {
-    char uid[7], tid[6], reply[128], command[5];
+    char uid[7], tid[6], command[5];
+    char * reply;
     int n, i, j, fd = 0;
     char fop;
+    reply = (char*)malloc(sizeof(char)*128);
     sscanf(buffer, "%s %s %s %c", command, uid, tid, &fop);
     if (!strcmp(command, "CNF")) {
         for (i = 0; i < numTransactions; i++) {
@@ -384,7 +383,7 @@ void doOperation(char *buffer) {
         }
         if (i == numTransactions) {
             printv("Error: Transaction was not found");
-            return ;
+            return;
         }
 
         for (j = 0; j < numClients; j++) {
@@ -424,6 +423,7 @@ void doOperation(char *buffer) {
             sendInvReply(transactions[i]);
         }
         printv("operation validated");
+        transactions[i] = NULL;
     } else
         strcpy(reply, "ERR\n");
     n = write(fd, reply, strlen(reply));
@@ -451,7 +451,8 @@ void fdManager() {
         maxfdp1 = MAX(fd_tcp, fd_udp);
 
         for (i = 0; i < numClients; i++) {
-            maxfdp1 = MAX(maxfdp1, users[i]->fd);
+            if (users[i] != NULL)
+                maxfdp1 = MAX(maxfdp1, users[i]->fd);
         }
 
         maxfdp1++;
@@ -459,7 +460,7 @@ void fdManager() {
         select(maxfdp1, &rset, NULL, NULL, NULL);
 
         if (FD_ISSET(fd_udp, &rset)) { // receive message from AS
-            printf("entrei chica\n");
+            printf("entrei chica\n"); // DEBUG
             n = recvfrom(fd_udp, buffer, 128, 0, (struct sockaddr *)&addr_udp, &addrlen_udp);
             if (n == -1) printError("main: recvfrom()");
             buffer[n] = '\0';
@@ -471,25 +472,26 @@ void fdManager() {
         if (FD_ISSET(fd_tcp, &rset)) { // receive new connection from user
             for (i = 0; i < numClients + 1; i++) {
                 if (users[i] == NULL) {
-                    printf("man\n");
                     users[i] = (User)malloc(sizeof(struct user));
                     if ((users[i]->fd = accept(fd_tcp, (struct sockaddr *)&addr_tcp, &addrlen_tcp)) == -1) printError("main: accept()");
                     break;
                 }
             }
             if (i == numClients) {
-                printf("entrei, man\n");
+                printf("entrei, man\n"); //DEBUG
                 numClients++;
                 users = (User *)realloc(users, sizeof(User) * (numClients+1));
                 users[numClients] = NULL;
-                printf("kdfjkf\n");
+                printf("kdfjkf\n"); //DEBUG
             }
         }
 
         for (i = 0; i < numClients; i++) { // receive command from User
-            if (FD_ISSET(users[i]->fd, &rset)) {
-                printf("entrei no ciclo\n");
-                userSession(i);
+            if (users[i] != NULL) {
+                if (FD_ISSET(users[i]->fd, &rset)) {
+                    printf("entrei no ciclo\n"); //DEBUG
+                    userSession(i);
+                }
             }
         }
     }
