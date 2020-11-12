@@ -279,7 +279,7 @@ char *validateOperation(char *uid, char *tid) {
     char *reply;
     char fop = 'A';
 
-    printf("inside validate operation\n"); // DEBUG
+    printf("inside validate operation\n");
 
     reply = (char *)malloc(128 * sizeof(char));
 
@@ -307,7 +307,6 @@ char *validateOperation(char *uid, char *tid) {
             }
         }
     }
-    printf("TID: %s\t FS_TID: %s\t\n", tid, requests[i]->tid); //DEBUG
 
     if (fop != 'E') fop = requests[i]->fop[0];
 
@@ -327,7 +326,7 @@ char *validateOperation(char *uid, char *tid) {
 char *applyCommand(char *message) {
     char command[5], arg1[32], arg2[32], arg3[32], arg4[32];
     char msg[64];
-    printf("inside applyCommand\n"); //DEBUG
+    printf("inside applyCommand\n");
     sprintf(msg, "message from PD or FS: %s", message);
     printv(msg);
     sscanf(message, "%s %s %s %s %s", command, arg1, arg2, arg3, arg4);
@@ -336,7 +335,7 @@ char *applyCommand(char *message) {
     } else if (!strcmp(command, "UNR")) {
         return unregistration(arg1, arg2);
     } else if (!strcmp(command, "VLD")) {
-        printf("going to validate operation\n"); // DEBUG
+        printf("going to validate operation\n");
         return validateOperation(arg1, arg2);
     } else {
         return "ERR\n";
