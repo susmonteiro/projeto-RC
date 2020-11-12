@@ -321,7 +321,7 @@ void retrieveFileReply(Transaction trans) {
 
 void uploadFile(Transaction trans) {
     // upload filename or u filename
-    int n, fsize, numCharsRead;
+    int n, fsize, count;
     char buffer[129], message[128];
     FILE *file;
 
@@ -346,10 +346,10 @@ void uploadFile(Transaction trans) {
     if (n == -1) errorExit("write()");
 
     do {
-        numCharsRead = fread(buffer, 128, 1, (FILE *)file);
+        count = fread(buffer, 1, 128, (FILE *)file);
         n = write(fd_fs, buffer, strlen(buffer));
         if (n == -1) errorExit("write()");
-    } while (numCharsRead == 128);
+    } while (count == 128);
 
     fclose(file);
     trans->pending = TRUE;
