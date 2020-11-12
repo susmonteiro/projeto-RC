@@ -19,7 +19,7 @@
 #define MAXARGS 4
 #define MINARGS 1
 
-#define TRUE  1
+#define TRUE 1
 #define FALSE 0
 
 #define MAX(a, b) a *(a > b) + b *(b >= a)
@@ -144,7 +144,7 @@ char *request(User userInfo, char *uid, char *rid, char *fop, char *fname) {
     }
     if (i == numRequests) {
         numRequests++;
-        requests = (Request *)realloc(requests, sizeof(Request) * (numRequests+1));
+        requests = (Request *)realloc(requests, sizeof(Request) * (numRequests + 1));
         requests[numRequests] = NULL;
     }
 
@@ -157,9 +157,9 @@ char *request(User userInfo, char *uid, char *rid, char *fop, char *fname) {
 char *secondAuth(char *uid, char *rid, char *vc) {
     int i;
     char message[64], tid[5];
-    char* buffer;
-    
-    buffer = (char*)malloc(sizeof(char) * 32);
+    char *buffer;
+
+    buffer = (char *)malloc(sizeof(char) * 32);
 
     for (i = 0; i < numRequests; i++) {
         if (!strcmp(requests[i]->rid, rid)) {
@@ -273,7 +273,7 @@ char *unregistration(char *uid, char *pass) {
 }
 
 char *validateOperation(char *uid, char *tid) {
-    //TO DO (Rodrigo)
+    // message - VLD UIF TID
     int i, j;
     char message[128], error[128];
     char *reply;
@@ -305,10 +305,11 @@ char *validateOperation(char *uid, char *tid) {
             }
         }
     }
+    printf("TID: %d\t FS_TID: %d\t\n", tid, requests[i]->tid);
 
     if (fop != 'E') fop = requests[i]->fop[0];
 
-    if(fop == 'R' || fop == 'U' || fop == 'D') {
+    if (fop == 'R' || fop == 'U' || fop == 'D') {
         sprintf(message, "User: UID=%s %c %s, TID=%s", uid, fop, requests[i]->fname, tid);
         printv(message);
         sprintf(reply, "CNF %s %s %c %s\n", uid, tid, fop, requests[i]->fname);
@@ -439,7 +440,7 @@ int main(int argc, char *argv[]) {
             }
             if (i == numClients) {
                 numClients++;
-                users = (User *)realloc(users, sizeof(User) * (numClients+1));
+                users = (User *)realloc(users, sizeof(User) * (numClients + 1));
                 users[numClients] = NULL;
             }
         }
