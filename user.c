@@ -609,7 +609,6 @@ void fdManager(Request req, Transaction trans) {
                 printf("Error: unexpected answer from FS\n");
                 closeConnections();
             }
-
             closeFSconnection();
         }
     }

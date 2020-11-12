@@ -195,6 +195,7 @@ void userSession(User userInfo) {
     if (n == -1) {
         printError("userSession: read()");
     } else if (n == 0) {
+        printf("entrei\n");
         close(userInfo->fd);
         if (strlen(userInfo->uid) > 0) {
             sprintf(path, "USERS/UID%s/UID%s_login.txt", userInfo->uid, userInfo->uid);
@@ -316,6 +317,7 @@ char *validateOperation(char *uid, char *tid) {
         printv(message);
         sprintf(reply, "CNF %s %s %c\n", uid, tid, fop);
     }
+    requests[i] = NULL;
     return reply;
 }
 
@@ -413,7 +415,8 @@ int main(int argc, char *argv[]) {
         maxfdp1 = MAX(fd_tcp, fd_udp) + 1;
 
         for (i = 0; i < numClients; i++) {
-            maxfdp1 = MAX(maxfdp1, users[i]->fd) + 1;
+            if (users[i] != NULL)
+                maxfdp1 = MAX(maxfdp1, users[i]->fd) + 1;
         }
 
         select(maxfdp1, &rset, NULL, NULL, NULL);
