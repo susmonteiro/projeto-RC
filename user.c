@@ -148,19 +148,19 @@ void requestFile(Request req) {
 
     scanf(" %c", &req->fop);
     switch (req->fop) {
-    case 'L':
-    case 'X':
-        sprintf(message, "REQ %s %s %c\n", uid, req->rid, req->fop);
-        break;
-    case 'D':
-    case 'R':
-    case 'U':
-        scanf("%s", fname);
-        sprintf(message, "REQ %s %s %c %s\n", uid, req->rid, req->fop, fname);
-        break;
-    default:
-        printf("Error: wrong command\n");
-        return;
+        case 'L':
+        case 'X':
+            sprintf(message, "REQ %s %s %c\n", uid, req->rid, req->fop);
+            break;
+        case 'D':
+        case 'R':
+        case 'U':
+            scanf("%s", fname);
+            sprintf(message, "REQ %s %s %c %s\n", uid, req->rid, req->fop, fname);
+            break;
+        default:
+            printf("Error: wrong command\n");
+            return;
     }
     n = write(fd_as, message, strlen(message));
     if (n == -1) errorExit("write()");
@@ -321,7 +321,7 @@ void retrieveFileReply(Transaction trans) {
 
 void uploadFile(Transaction trans) {
     // upload filename or u filename
-    int n, fsize;
+    int n, fsize, numCharsRead;
     char buffer[129], message[128];
     FILE *file;
 
@@ -345,10 +345,11 @@ void uploadFile(Transaction trans) {
     n = write(fd_fs, message, strlen(message));
     if (n == -1) errorExit("write()");
 
-    while (fgets(buffer, 128, (FILE *)file) != NULL) {
+    do {
+        numCharsRead = fread(buffer, 128, 1, (FILE *)file);
         n = write(fd_fs, buffer, strlen(buffer));
         if (n == -1) errorExit("write()");
-    }
+    } while (numCharsRead == 128);
 
     fclose(file);
     trans->pending = TRUE;
