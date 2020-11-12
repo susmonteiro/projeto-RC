@@ -279,6 +279,8 @@ char *validateOperation(char *uid, char *tid) {
     char *reply;
     char fop = 'A';
 
+    printf("inside validate operation\n"); // DEBUG
+
     reply = (char *)malloc(128 * sizeof(char));
 
     for (i = 0; i < numRequests; i++) {
