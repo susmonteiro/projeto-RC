@@ -305,7 +305,7 @@ char *validateOperation(char *uid, char *tid) {
             }
         }
     }
-    printf("TID: %d\t FS_TID: %d\t\n", tid, requests[i]->tid); //DEBUG
+    printf("TID: %s\t FS_TID: %s\t\n", tid, requests[i]->tid); //DEBUG
 
     if (fop != 'E') fop = requests[i]->fop[0];
 
