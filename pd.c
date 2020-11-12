@@ -15,8 +15,8 @@ The PD application can also receive a command to exit, unregistering the user.
 
 #include "config.h"
 #include "connection.h"
-#include "error.h"
 #include <arpa/inet.h>
+#include <errno.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <signal.h>
@@ -59,6 +59,16 @@ char lastMessage[128];
 char pdip[32], pdport[8], asip[32], asport[8];
 char uid[6], pass[9];
 int maxfdp1, registered = NOT_REGISTERED;
+
+/*      === error functions ===       */
+
+void errorExit(char *errorMessage) {
+    if (errno != 0)
+        printf("ERR: %s: %s\nExiting...\n", errorMessage, strerror(errno));
+    else
+        printf("ERR: %s\nExiting...\n", errorMessage);
+    freePD();
+}
 
 /*      === sighandler functions ===       */
 
@@ -262,8 +272,8 @@ int main(int argc, char *argv[]) {
     int i;
 
     if (argc < MINARGS || argc > MAXARGS) {
+        printf("Error: incorrect number of arguments\n");
         printf("​Usage: %s PDIP [-d PDport] [-n ASIP] [-p ASport]\n", argv[0]);
-        errorDIYexit("incorrect number of arguments");
     }
 
     strcpy(pdip, argv[1]);
