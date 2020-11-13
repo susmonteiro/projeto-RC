@@ -19,7 +19,7 @@
 #define MAXARGS 4
 #define MINARGS 1
 
-#define TRUE  1
+#define TRUE 1
 #define FALSE 0
 
 #define MAX(a, b) a *(a > b) + b *(b >= a)
@@ -144,7 +144,7 @@ char *request(int ind, char *uid, char *rid, char *fop, char *fname) {
     }
     if (i == numRequests) {
         numRequests++;
-        requests = (Request *)realloc(requests, sizeof(Request) * (numRequests+1));
+        requests = (Request *)realloc(requests, sizeof(Request) * (numRequests + 1));
         requests[numRequests] = NULL;
     }
 
@@ -157,9 +157,9 @@ char *request(int ind, char *uid, char *rid, char *fop, char *fname) {
 char *secondAuth(char *uid, char *rid, char *vc) {
     int i;
     char message[64], tid[5];
-    char* buffer;
-    
-    buffer = (char*)malloc(sizeof(char) * 32);
+    char *buffer;
+
+    buffer = (char *)malloc(sizeof(char) * 32);
 
     for (i = 0; i < numRequests; i++) {
         if (!strcmp(requests[i]->rid, rid)) {
@@ -272,16 +272,18 @@ char *unregistration(char *uid, char *pass) {
 }
 
 char *validateOperation(char *uid, char *tid) {
-    //TO DO (Rodrigo)
+    // message - VLD UIF TID
     int i, j;
     char message[128], error[128];
     char *reply;
     char fop = 'A';
 
+    printf("inside validate operation\n");
+
     reply = (char *)malloc(128 * sizeof(char));
 
     for (i = 0; i < numRequests; i++) {
-        if (!strcmp(tid, requests[i]->tid))
+        if (requests[i] != NULL && !strcmp(tid, requests[i]->tid))
             break;
     }
     if (i == numRequests) {
@@ -307,7 +309,7 @@ char *validateOperation(char *uid, char *tid) {
 
     if (fop != 'E') fop = requests[i]->fop[0];
 
-    if(fop == 'R' || fop == 'U' || fop == 'D') {
+    if (fop == 'R' || fop == 'U' || fop == 'D') {
         sprintf(message, "User: UID=%s %c %s, TID=%s", uid, fop, requests[i]->fname, tid);
         printv(message);
         sprintf(reply, "CNF %s %s %c %s\n", uid, tid, fop, requests[i]->fname);
@@ -323,6 +325,7 @@ char *validateOperation(char *uid, char *tid) {
 char *applyCommand(char *message) {
     char command[5], arg1[32], arg2[32], arg3[32], arg4[32];
     char msg[64];
+    printf("inside applyCommand\n");
     sprintf(msg, "message from PD or FS: %s", message);
     printv(msg);
     sscanf(message, "%s %s %s %s %s", command, arg1, arg2, arg3, arg4);
@@ -331,6 +334,7 @@ char *applyCommand(char *message) {
     } else if (!strcmp(command, "UNR")) {
         return unregistration(arg1, arg2);
     } else if (!strcmp(command, "VLD")) {
+        printf("going to validate operation\n");
         return validateOperation(arg1, arg2);
     } else {
         return "ERR\n";
@@ -370,7 +374,7 @@ int main(int argc, char *argv[]) {
     strcpy(asport, ASPORT);
 
     for (i = MINARGS; i < argc; i++) {
-        if (!strcmp(argv[i], "-h")) {
+        if (!strcmp(argv[i], "-h") || i + 1 == argc) {
             printf("​Usage: %s -p [ASport] [-v]\n", argv[0]);
             exit(0);
         } else if (!strcmp(argv[i], "-v")) {
@@ -438,7 +442,7 @@ int main(int argc, char *argv[]) {
             }
             if (i == numClients) {
                 numClients++;
-                users = (User *)realloc(users, sizeof(User) * (numClients+1));
+                users = (User *)realloc(users, sizeof(User) * (numClients + 1));
                 users[numClients] = NULL;
             }
         }

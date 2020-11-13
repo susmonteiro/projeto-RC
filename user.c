@@ -1,12 +1,15 @@
-/* User Application */
+/*  User Application 
 
-/* ===      TODO in User        ===
-    - function retrieve file: it writes things it shouldn't to file 
+invoked with: 
+     ./user [-n ASIP] [-p ASport] [-m FSIP] [-q FSport]
+
+Once the User application program is running, it establishes a TCP session with the AS,
+which remains open, and then waits for the user to indicate the action to take.
+
 */
 
 #include "config.h"
 #include "connection.h"
-#include "error.h"
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netdb.h>
@@ -24,12 +27,11 @@
 #define MAXARGS 10
 #define MINARGS 1
 
-#define TRUE 1
-#define FALSE 0
-
 #define MAX(a, b) a *(a > b) + b *(b >= a)
 
-int fsConnected = FALSE, asConnected = FALSE;
+void closeASconnection();
+void closeFSconnection();
+void closeConnections();
 
 typedef struct request {
     char rid[5];
@@ -50,8 +52,27 @@ struct addrinfo *res_as, *res_fs;
 
 char fsip[32], fsport[8], asip[32], asport[8];
 char uid[6], pass[9];
-Request req;
-Transaction trans;
+Request req;       // one request possible at a time
+Transaction trans; // one transaction at a time
+
+int endUser = FALSE;
+int asConnected = FALSE, fsConnected = FALSE;
+
+/*      === error functions ===       */
+
+void errorExit(char *errorMessage) {
+    if (errno != 0)
+        printf("ERR: %s: %s\nExiting...\n", errorMessage, strerror(errno));
+    else
+        printf("ERR: %s\nExiting...\n", errorMessage);
+    closeConnections();
+}
+
+/*      === sighandler functions ===       */
+
+void exitHandler() {
+    endUser = TRUE;
+}
 
 /*      === end User ===       */
 
@@ -79,7 +100,7 @@ void closeConnections() {
 
 /*      === auxiliar functions ===       */
 
-void readUntilSpace(int fd, char *buffer) { // TODO function common to other files?
+void readUntilSpace(int fd, char *buffer) {
     char c;
     int i = 0, n = 0;
     do {
@@ -87,7 +108,7 @@ void readUntilSpace(int fd, char *buffer) { // TODO function common to other fil
         if (n == -1)
             errorExit("read()");
         else if (n == 0) {
-            printf("Error: FS closed\n");
+            printf("Error: server closed\n");
             closeConnections();
         }
         buffer[i++] = c;
@@ -139,7 +160,7 @@ void requestFile(Request req) {
     char message[64], fname[32];
 
     if (req->pending) {
-        readGarbage();
+        readGarbage(); // ignore rest of request
         printf("Error: request pending\n");
         return;
     }
@@ -164,7 +185,8 @@ void requestFile(Request req) {
     }
     n = write(fd_as, message, strlen(message));
     if (n == -1) errorExit("write()");
-    req->pending = TRUE;
+
+    req->pending = TRUE; // no more requests can be done until this one is validated
 }
 
 void validateCode(Request req) {
@@ -173,7 +195,7 @@ void validateCode(Request req) {
     char message[64], vc[5];
 
     if (!req->pending) {
-        readGarbage();
+        readGarbage(); // ignore vc
         printf("Error: no request done\n");
         return;
     }
@@ -240,7 +262,7 @@ void listFilesReply(Transaction trans) {
 }
 
 void retrieveFile(Transaction trans) {
-    //retrieve filename or r filename
+    // retrieve filename or r filename
     int n;
     char message[128];
 
@@ -487,6 +509,8 @@ void fdManager(Request req, Transaction trans) {
     int n, maxfdp1;
 
     while (1) {
+        if (endUser) closeConnections();
+
         FD_ZERO(&rset);
         FD_SET(STDIN, &rset);
         FD_SET(fd_as, &rset);
@@ -501,7 +525,7 @@ void fdManager(Request req, Transaction trans) {
         n = select(maxfdp1, &rset, NULL, NULL, NULL);
         if (n == -1) errorExit("select()");
 
-        if (FD_ISSET(STDIN, &rset)) {
+        if (FD_ISSET(STDIN, &rset)) { // receive command from terminal
             scanf("%s", command);
 
             if (strcmp(command, "login") && strcmp(command, "exit") && asConnected == FALSE) {
@@ -536,7 +560,7 @@ void fdManager(Request req, Transaction trans) {
             }
         }
 
-        if (FD_ISSET(fd_as, &rset)) {
+        if (FD_ISSET(fd_as, &rset)) { // receive confirmation from AS
             readUntilSpace(fd_as, command);
             readUntilSpace(fd_as, status);
 
@@ -578,8 +602,8 @@ void fdManager(Request req, Transaction trans) {
             }
         }
 
-        if (fsConnected == FALSE) continue;
-        if (FD_ISSET(fd_fs, &rset)) {
+        if (fsConnected == FALSE) continue; // check if user is connected to FS
+        if (FD_ISSET(fd_fs, &rset)) {       // receive confirmation from FS
             char typeMsg[4];
             n = read(fd_fs, typeMsg, 4); // read type + space
             if (n == -1)
@@ -629,7 +653,7 @@ int main(int argc, char *argv[]) {
     strcpy(fsport, FSPORT);
 
     for (i = 1; i < argc; i++) {
-        if (!strcmp(argv[i], "-h")) {
+        if (!strcmp(argv[i], "-h") || i + 1 >= argc) {
             printf("​Usage: %s [-n ASIP] [-p ASport] [-m FSIP] [-q FSport]\n", argv[0]);
             exit(0);
         } else if (!strcmp(argv[i], "-n")) {
@@ -643,12 +667,11 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    srand(time(NULL));
+    srand(time(NULL)); // initialize rand()
 
     tcpConnect(asip, asport, &fd_as, &res_as);
 
-    signal(SIGINT, closeConnections);
-    signal(SIGPIPE, closeConnections);
+    signal(SIGINT, exitHandler);
 
     req = (Request)malloc(sizeof(struct request));
     strcpy(req->rid, "0000");
