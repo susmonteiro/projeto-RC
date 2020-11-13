@@ -322,6 +322,9 @@ Request and reply messages:
 
 ## Checklist:
 - login de um user 2x fica em loop no AS?
+- resend messages in AS and in FS
+- ver frees pd
+- user: select should ignore signals 
 
 ## TODO:
 - verificar que os ficheiros estao sempre a terminar como deve de ser e que os servidores nunca morrem quando recebem algo inválido [**Susana**]
