@@ -510,8 +510,6 @@ void fdManager(Request req, Transaction trans) {
     int n, maxfdp1;
 
     while (1) {
-        if (endUser) closeConnections();
-
         FD_ZERO(&rset);
         FD_SET(STDIN, &rset);
         FD_SET(fd_as, &rset);
@@ -524,7 +522,10 @@ void fdManager(Request req, Transaction trans) {
         maxfdp1++;
 
         n = select(maxfdp1, &rset, NULL, NULL, NULL);
-        if (n == -1) continue; // if interrupted by signals
+        if (n == -1) { // if interrupted by signals
+            if (endUser) closeConnections();
+            continue;
+        }
 
         if (FD_ISSET(STDIN, &rset)) { // receive command from terminal
             scanf("%s", command);
