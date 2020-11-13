@@ -204,6 +204,7 @@ void validateCode(Request req) {
     scanf("%s", vc);
 
     sprintf(message, "AUT %s %s %s\n", uid, req->rid, vc);
+
     n = write(fd_as, message, strlen(message));
     if (n == -1) errorExit("write()");
 }
@@ -347,7 +348,7 @@ void retrieveFileReply(Transaction trans) {
 void uploadFile(Transaction trans) {
     // upload filename or u filename
     int n, fsize, count;
-    char buffer[129], message[128];
+    char buffer[128], message[128];
     FILE *file;
 
     if (isTransactionPending(trans)) return;
@@ -372,7 +373,7 @@ void uploadFile(Transaction trans) {
 
     do {
         count = fread(buffer, 1, 128, (FILE *)file);
-        n = write(fd_fs, buffer, strlen(buffer));
+        n = write(fd_fs, buffer, count);
         if (n == -1) errorExit("write()");
     } while (count == 128);
 
@@ -526,7 +527,7 @@ void fdManager(Request req, Transaction trans) {
         maxfdp1++;
 
         n = select(maxfdp1, &rset, NULL, NULL, NULL);
-        if (n == -1) errorExit("select()");
+        if (n == -1) continue; // if interrupted by signals
 
         if (FD_ISSET(STDIN, &rset)) { // receive command from terminal
             scanf("%s", command);

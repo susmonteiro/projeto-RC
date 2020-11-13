@@ -53,9 +53,9 @@ struct sockaddr_in addr_udp;
 
 int numTries = 0;
 int typeMessage = NO_MSG;
-int endPD = FALSE;
-int messageToResend = FALSE;
 char lastMessage[128];
+int messageToResend = FALSE;
+int endPD = FALSE;
 
 char pdip[32], pdport[8], asip[32], asport[8];
 char uid[6], pass[9], tmpUid[6], tmpPass[9];
@@ -218,7 +218,7 @@ void fdManager() {
         maxfdp1 = MAX(maxfdp1, fd_udp_client) + 1;
 
         n = select(maxfdp1, &rset, NULL, NULL, NULL);
-        if (n == -1) continue; // if interrupted by SIGALRM
+        if (n == -1) continue; // if interrupted by signals
 
         if (FD_ISSET(STDIN, &rset)) {
             if (typeMessage == NO_MSG) { // reads message if there are none waiting to be acknowledge
