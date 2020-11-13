@@ -10,7 +10,6 @@ which remains open, and then waits for the user to indicate the action to take.
 
 #include "config.h"
 #include "connection.h"
-#include "error.h"
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netdb.h>
@@ -61,13 +60,13 @@ int asConnected = FALSE, fsConnected = FALSE;
 
 /*      === error functions ===       */
 
-/*void errorExit(char *errorMessage) {
+void errorExit(char *errorMessage) {
     if (errno != 0)
         printf("ERR: %s: %s\nExiting...\n", errorMessage, strerror(errno));
     else
         printf("ERR: %s\nExiting...\n", errorMessage);
     closeConnections();
-}*/
+}
 
 /*      === sighandler functions ===       */
 
@@ -214,9 +213,7 @@ void listFiles(Transaction trans) {
     int n;
     char message[64];
 
-    if (isTransactionPending(trans)) {
-        return;
-    }
+    if (isTransactionPending(trans)) return;
     trans->fop = 'L';
 
     tcpConnect(fsip, fsport, &fd_fs, &res_fs);
@@ -597,7 +594,6 @@ void fdManager(Request req, Transaction trans) {
                     printf("Authenticated  |   TID = %s\n", status);
                     req->pending = FALSE;
                     strcpy(trans->tid, status);
-                    printf("TID: %s\n", trans->tid);
                 }
             } else if (!strcmp(command, "ERR")) {
                 printf("Error: AS replied with ERR");

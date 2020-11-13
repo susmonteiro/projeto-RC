@@ -15,7 +15,6 @@ The PD application can also receive a command to exit, unregistering the user.
 
 #include "config.h"
 #include "connection.h"
-#include "error.h"
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netdb.h>
@@ -58,19 +57,18 @@ int messageToResend = FALSE;
 int endPD = FALSE;
 
 char pdip[32], pdport[8], asip[32], asport[8];
-char uid[6], pass[9], tmpUid[6], tmpPass[9];
+char uid[6], pass[9];
 int maxfdp1, registered = NOT_REGISTERED;
 
 /*      === error functions ===       */
 
-// Funcao esta em error.c
-/*void errorExit(char *errorMessage) {
+void errorExit(char *errorMessage) {
     if (errno != 0)
         printf("ERR: %s: %s\n", errorMessage, strerror(errno));
     else
         printf("ERR: %s\n", errorMessage);
     freePD();
-}*/
+}
 
 /*      === sighandler functions ===       */
 
@@ -116,7 +114,7 @@ void exitPD() {
 
 /*      === command functions ===        */
 
-void registration() {
+void registration(char *tmpUid, char *tmpPass) {
     // reg UID pass
     int n, len;
     char message[64];
@@ -203,7 +201,7 @@ char *validateRequest(char *message) {
 
 void fdManager() {
     int n;
-    char reply[9], buffer[32], command[6];
+    char reply[9], buffer[32], command[6], tmpUid[7], tmpPass[10];
 
     while (1) {
         if (endPD) exitPD();
@@ -224,7 +222,7 @@ void fdManager() {
             if (typeMessage == NO_MSG) { // reads message if there are none waiting to be acknowledge
                 scanf("%s", command);
                 if (!strcmp(command, "reg")) {
-                    registration();
+                    registration(tmpUid, tmpPass);
                 } else if (!strcmp(command, "exit")) {
                     unregistration();
                 } else

@@ -33,8 +33,19 @@ typedef struct request {
     char fname[32];
 } * Request;
 
-int numClients = 1;
-int numRequests = 1;
+typedef struct user {
+    int fd;
+    char uid[7];
+    int numTries;
+    int messageToBeCNF;
+    char lastMessage[128];
+    int pd_fd;
+    struct addrinfo *pd_res;
+    struct request pendingRequest;
+} * User;
+
+int numClients = 0;
+int numRequests = 0;
 int verbose = FALSE;
 int messageToResend = FALSE;
 
@@ -125,8 +136,8 @@ char *login(User userInfo, char *uid, char *pass) {
     fclose(file);
 
     printv(uid);
-    strcpy(users[ind]->uid, uid);
-    users[ind]->uid[5] = '\0';
+    strcpy(userInfo->uid, uid);
+    userInfo->uid[5] = '\0';
     printv(uid);
     sprintf(message, "User: login ok, UID=%s", uid);
     printv(message);
@@ -182,7 +193,7 @@ void request(User userInfo, char *uid, char *rid, char *fop, char *fname) {
         sprintf(buffer, "VLC %s %s %s %s\n", uid, vc, fop, fname);
     }
 
-    for (i = 0; i < numRequests; i++) {
+    for (i = 0; i < numRequests + 1; i++) {
         if (requests[i] == NULL) {
             requests[i] = (Request)malloc(sizeof(struct request));
             strcpy(requests[i]->rid, rid);
@@ -193,10 +204,10 @@ void request(User userInfo, char *uid, char *rid, char *fop, char *fname) {
             break;
         }
     }
-    if (i == numRequests) {
+    if (i == numRequests + 1) {
         numRequests++;
         requests = (Request *)realloc(requests, sizeof(Request) * (numRequests));
-        requests[numRequests-1] = NULL;
+        requests[numRequests] = NULL;
     }
 
     n = sendto(userInfo->pd_fd, buffer, strlen(buffer), 0, userInfo->pd_res->ai_addr, userInfo->pd_res->ai_addrlen);
@@ -269,22 +280,23 @@ char *secondAuth(char *uid, char *rid, char *vc) {
     return buffer;
 }
 
-void userSession(int ind) {
+void userSession(User userInfo) {
     int n;
     char buffer[128], msg[256], path[64], command[5], uid[32], rid[32], fop[32], vc[32], fname[32];
     printf("user session\n"); //DEBUG
 
-    n = read(users[ind]->fd, buffer, 128);
+    n = read(userInfo->fd, buffer, 128);
     if (n == -1) {
         printError("userSession: read()");
     } else if (n == 0) {
         printf("entrei\n");
-        if (strlen(users[ind]->uid) > 0) {
-            sprintf(path, "USERS/UID%s/UID%s_login.txt", users[ind]->uid, users[ind]->uid);
+        close(userInfo->fd);
+        if (strlen(userInfo->uid) > 0) {
+            sprintf(path, "USERS/UID%s/UID%s_login.txt", userInfo->uid, userInfo->uid);
             remove(path);
         }
-        close(users[ind]->fd);
-        users[ind] = NULL;
+
+        userInfo = NULL;
         return;
     }
 
@@ -339,7 +351,7 @@ char *registration(char *uid, char *pass, char *pdip_new, char *pdport_new) {
 }
 
 char *unregistration(char *uid, char *pass) {
-    char path[64], currentPass[9];
+    char path[64], currentPass[32];
     FILE *file;
 
     sprintf(path, "USERS/UID%s/UID%s_pass.txt", uid, uid);
@@ -442,11 +454,11 @@ int main(int argc, char *argv[]) {
     strcpy(asport, ASPORT);
 
     for (i = MINARGS; i < argc; i++) {
-        if (!strcmp(argv[i], "-v")) {
-            verbose = TRUE;
-        } else if (!strcmp(argv[i], "-h") || i + 1 == argc) {
+        if (!strcmp(argv[i], "-h")) {
             printf("​Usage: %s -p [ASport] [-v]\n", argv[0]);
             exit(0);
+        } else if (!strcmp(argv[i], "-v")) {
+            verbose = TRUE;
         } else if (!strcmp(argv[i], "-p")) {
             if (i + 1 == argc) {
                 printf("​Usage: %s -p [ASport] [-v]\n", argv[0]);
@@ -512,8 +524,10 @@ int main(int argc, char *argv[]) {
             n = sendto(fd_udp, applyCommand(buffer), 32, 0, (struct sockaddr *)&addr_udp, addrlen_udp);
             if (n == -1) printError("main: sendto()");
         }
-        if (FD_ISSET(fd_tcp, &rset)) {
-            for (i = 0; i < numClients; i++) {
+
+        if (FD_ISSET(fd_tcp, &rset)) { // receive user connections
+            printf("received tcp connection\n");
+            for (i = 0; i < numClients + 1; i++) {
                 if (users[i] == NULL) {
                     printf("creating user\n"); //DEBUG
                     users[i] = (User)malloc(sizeof(struct user));
@@ -524,8 +538,8 @@ int main(int argc, char *argv[]) {
             }
             if (i == numClients) {
                 numClients++;
-                users = (User *)realloc(users, sizeof(User) * (numClients));
-                users[numClients-1] = NULL;
+                users = (User *)realloc(users, sizeof(User) * (numClients + 1));
+                users[numClients] = NULL;
             }
         }
         for (i = 0; i < numClients; i++) {
