@@ -563,6 +563,11 @@ void fdManager(Request req, Transaction trans) {
 
         if (FD_ISSET(fd_as, &rset)) { // receive confirmation from AS
             readUntilSpace(fd_as, command);
+
+            if (!strcmp(command, "ERR")) {
+                errorExit("Error: AS replied with ERR");
+            }
+
             readUntilSpace(fd_as, status);
 
             if (!strcmp(command, "RLO")) {
@@ -595,11 +600,8 @@ void fdManager(Request req, Transaction trans) {
                     req->pending = FALSE;
                     strcpy(trans->tid, status);
                 }
-            } else if (!strcmp(command, "ERR")) {
-                printf("Error: AS replied with ERR");
             } else {
-                printf("Error: unexpected answer from AS\n");
-                closeConnections();
+                errorExit("Error: unexpected answer from AS\n");
             }
         }
 
