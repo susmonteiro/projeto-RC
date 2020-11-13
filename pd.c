@@ -204,9 +204,6 @@ void fdManager() {
     char reply[9], buffer[32], command[6], tmpUid[7], tmpPass[10];
 
     while (1) {
-        if (endPD) exitPD();
-        if (messageToResend) resendMessage();
-
         FD_ZERO(&rset);
         FD_SET(STDIN, &rset);
         FD_SET(fd_udp, &rset);
@@ -216,7 +213,11 @@ void fdManager() {
         maxfdp1 = MAX(maxfdp1, fd_udp_client) + 1;
 
         n = select(maxfdp1, &rset, NULL, NULL, NULL);
-        if (n == -1) continue; // if interrupted by signals
+        if (n == -1) { // if interrupted by signals
+            if (endPD) exitPD();
+            if (messageToResend) resendMessage();
+            continue;
+        }
 
         if (FD_ISSET(STDIN, &rset)) {
             if (typeMessage == NO_MSG) { // reads message if there are none waiting to be acknowledge
