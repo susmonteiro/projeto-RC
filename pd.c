@@ -64,9 +64,9 @@ int maxfdp1, registered = NOT_REGISTERED;
 
 void errorExit(char *errorMessage) {
     if (errno != 0)
-        printf("ERR: %s: %s\nExiting...\n", errorMessage, strerror(errno));
+        printf("ERR: %s: %s\n", errorMessage, strerror(errno));
     else
-        printf("ERR: %s\nExiting...\n", errorMessage);
+        printf("ERR: %s\n", errorMessage);
     freePD();
 }
 
@@ -272,8 +272,8 @@ int main(int argc, char *argv[]) {
     int i;
 
     if (argc < MINARGS || argc > MAXARGS) {
-        printf("Error: incorrect number of arguments\n");
         printf("​Usage: %s PDIP [-d PDport] [-n ASIP] [-p ASport]\n", argv[0]);
+        errorExit("Error: incorrect number of arguments");
     }
 
     strcpy(pdip, argv[1]);
