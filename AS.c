@@ -58,7 +58,7 @@ void printv(char *message) {
     if (verbose) printf("%s\n", message);
 }
 
-char *login(User userInfo, char *uid, char *pass) {
+char *login(int ind, char *uid, char *pass) {
     char message[64], path[64], currentPass[32];
     FILE *file;
 
@@ -76,15 +76,15 @@ char *login(User userInfo, char *uid, char *pass) {
     fclose(file);
 
     printv(uid);
-    strcpy(userInfo->uid, uid);
-    userInfo->uid[5] = '\0';
+    strcpy(users[ind]->uid, uid);
+    users[ind]->uid[5] = '\0';
     printv(uid);
     sprintf(message, "User: login ok, UID=%s", uid);
     printv(message);
     return "RLO OK\n";
 }
 
-char *request(User userInfo, char *uid, char *rid, char *fop, char *fname) {
+char *request(int ind, char *uid, char *rid, char *fop, char *fname) {
     char buffer[64], path[64], pdport[32], pdip[32], vc[5];
     int n, i, fd;
     FILE *file;
@@ -97,7 +97,7 @@ char *request(User userInfo, char *uid, char *rid, char *fop, char *fname) {
     if (access(path, F_OK) == -1)
         return "RRQ ELOG\n";
 
-    if (strcmp(userInfo->uid, uid))
+    if (strcmp(users[ind]->uid, uid))
         return "RRQ EUSER\n";
 
     sprintf(path, "USERS/UID%s/UID%s_reg.txt", uid, uid);
@@ -187,22 +187,21 @@ char *secondAuth(char *uid, char *rid, char *vc) {
     return buffer;
 }
 
-void userSession(User userInfo) {
+void userSession(int ind) {
     int n;
     char buffer[128], msg[256], path[64], command[5], uid[32], rid[32], fop[32], vc[32], fname[32];
 
-    n = read(userInfo->fd, buffer, 128);
+    n = read(users[ind]->fd, buffer, 128);
     if (n == -1) {
         printError("userSession: read()");
     } else if (n == 0) {
         printf("entrei\n");
-        close(userInfo->fd);
-        if (strlen(userInfo->uid) > 0) {
-            sprintf(path, "USERS/UID%s/UID%s_login.txt", userInfo->uid, userInfo->uid);
+        if (strlen(users[ind]->uid) > 0) {
+            sprintf(path, "USERS/UID%s/UID%s_login.txt", users[ind]->uid, users[ind]->uid);
             remove(path);
         }
-
-        userInfo = NULL;
+        close(users[ind]->fd);
+        users[ind] = NULL;
         return;
     }
 
@@ -213,15 +212,15 @@ void userSession(User userInfo) {
     sscanf(buffer, "%s", command);
     if (!strcmp(command, "LOG")) {
         sscanf(buffer, "%s %s %s", command, uid, rid);
-        strcpy(buffer, login(userInfo, uid, rid));
+        strcpy(buffer, login(ind, uid, rid));
     } else if (!strcmp(command, "REQ")) {
         sscanf(buffer, "%s %s %s %s %s", command, uid, rid, fop, fname);
-        strcpy(buffer, request(userInfo, uid, rid, fop, fname));
+        strcpy(buffer, request(ind, uid, rid, fop, fname));
     } else if (!strcmp(command, "AUT")) {
         sscanf(buffer, "%s %s %s %s", command, uid, rid, vc);
         strcpy(buffer, secondAuth(uid, rid, vc));
     }
-    n = write(userInfo->fd, buffer, strlen(buffer));
+    n = write(users[ind]->fd, buffer, strlen(buffer));
     if (n == -1) printError("userSession: write()");
 }
 
@@ -255,7 +254,7 @@ char *registration(char *uid, char *pass, char *pdip_new, char *pdport_new) {
 }
 
 char *unregistration(char *uid, char *pass) {
-    char path[64], currentPass[32];
+    char path[64], currentPass[9];
     FILE *file;
 
     sprintf(path, "USERS/UID%s/UID%s_pass.txt", uid, uid);
@@ -445,7 +444,7 @@ int main(int argc, char *argv[]) {
         }
         for (i = 0; i < numClients; i++) {
             if (FD_ISSET(users[i]->fd, &rset)) {
-                userSession(users[i]);
+                userSession(i);
             }
         }
     }

@@ -61,7 +61,7 @@ int typeMessage = NO_MSG;
 char lastMessage[128];
 
 char pdip[32], pdport[8], asip[32], asport[8];
-char uid[6], pass[9];
+char uid[6], pass[9], tmpUid[6], tmpPass[9];
 int maxfdp1, registered = NOT_REGISTERED;
 
 /*      === resend messages that were not acknowledge ===       */
@@ -97,7 +97,7 @@ void exitPD() {
 
 /*      === command functions ===        */
 
-void registration(char *tmpUid, char *tmpPass) {
+void registration() {
     // reg UID pass
     int n, len;
     char message[64];
@@ -184,7 +184,7 @@ char *validateRequest(char *message) {
 
 void fdManager() {
     int n;
-    char reply[9], buffer[32], command[6], tmpUid[7], tmpPass[10];
+    char reply[9], buffer[32], command[6];
 
     while (1) {
         FD_ZERO(&rset);
@@ -202,7 +202,7 @@ void fdManager() {
             if (typeMessage == NO_MSG) { // reads message if there are none waiting to be acknowledge
                 scanf("%s", command);
                 if (!strcmp(command, "reg")) {
-                    registration(tmpUid, tmpPass);
+                    registration();
                 } else if (!strcmp(command, "exit")) {
                     unregistration();
                 } else
@@ -278,7 +278,7 @@ int main(int argc, char *argv[]) {
     addrlen_udp = sizeof(addr_udp);
     udpConnect(asip, asport, &fd_udp_client, &res_udp_client);
 
-    signal(SIGINT, exitPD);
+    signal(SIGINT, unregistration);
     signal(SIGALRM, resendMessage);
 
     fdManager();
