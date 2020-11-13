@@ -44,6 +44,7 @@ int numTries = 0;
 char lastMessage[128];
 int messageToBeCNF = FALSE;
 int messageToResend = FALSE;
+int endFS = FALSE;
 
 int fd_udp, fd_tcp;
 User *users;
@@ -86,6 +87,10 @@ void exitFS() {
 
 void resendHandler() {
     messageToResend = TRUE;
+}
+
+void exitHandler() {
+    endFS = TRUE;
 }
 
 /*      === resend messages that were not acknowledge ===       */
@@ -505,8 +510,6 @@ void fdManager() {
     int i, n, maxfdp1;
 
     while (1) {
-        if (messageToResend) resendMessage();
-
         FD_ZERO(&rset);
         FD_SET(fd_udp, &rset);
         FD_SET(fd_tcp, &rset);
@@ -525,8 +528,12 @@ void fdManager() {
 
         maxfdp1++;
 
-        select(maxfdp1, &rset, NULL, NULL, NULL);
-        if (n == -1) continue; // if interrupted by signals
+        n = select(maxfdp1, &rset, NULL, NULL, NULL);
+        if (n == -1) { // if interrupted by signals
+            if (endFS) exitFS();
+            if (messageToResend) resendMessage();
+            continue;
+        }
 
         if (FD_ISSET(fd_udp, &rset)) { // receive message from AS
             n = recvfrom(fd_udp, buffer, 128, 0, (struct sockaddr *)&addr_udp, &addrlen_udp);
@@ -604,7 +611,7 @@ int main(int argc, char *argv[]) {
     transactions = (Transaction *)malloc(sizeof(Transaction));
     transactions[0] = NULL;
 
-    signal(SIGINT, exitFS);
+    signal(SIGINT, exitHandler);
     signal(SIGALRM, resendHandler);
 
     fdManager();
