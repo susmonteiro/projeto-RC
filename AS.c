@@ -221,6 +221,7 @@ void request(User userInfo, char *uid, char *rid, char *fop, char *fname) {
 
     for (i = 0; i < numRequests + 1; i++) {
         if (requests[i] == NULL) {
+            printf("found an empty request\n");
             requests[i] = (Request)malloc(sizeof(struct request));
             strcpy(requests[i]->rid, rid);
             strcpy(requests[i]->uid, uid);
@@ -232,6 +233,7 @@ void request(User userInfo, char *uid, char *rid, char *fop, char *fname) {
     }
     if (i == numRequests + 1) {
         numRequests++;
+        printf("number of requests: %d\n", numRequests);
         requests = (Request *)realloc(requests, sizeof(Request) * (numRequests));
         requests[numRequests] = NULL;
     }
@@ -269,6 +271,7 @@ void requestReply(User userInfo) {
     }
 
     if (!allGoodMyDude) {
+        printf("deleting request\n"); //DEBUG
         for (i = 0; i < numRequests + 1; i++) {
             if (!strcmp(requests[i]->uid, userInfo->uid)) {
                 requests[i] = NULL;
@@ -296,14 +299,18 @@ char *secondAuth(char *uid, char *rid, char *vc) {
 
     buffer = (char *)malloc(sizeof(char) * 32);
 
-    for (i = 0; i < numRequests; i++) {
+    printf("numRequests: %d\n", numRequests); // DEBUG
+
+    for (i = 0; i < numRequests + 1; i++) {
         if (!strcmp(requests[i]->rid, rid)) {
             break;
         }
     }
-
-    if (i == numRequests || strcmp(requests[i]->vc, vc))
+    //wtf
+    if (i == numRequests + 1 || strcmp(requests[i]->vc, vc)) {
+        printf("no request made\n"); //DEBUG
         return "RAU 0\n";
+    }
 
     sprintf(tid, "%04d", rand() % 10000);
     strcpy(requests[i]->tid, tid);
