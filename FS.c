@@ -40,6 +40,11 @@ int numClients = 0;
 int numTransactions = 0;
 int verbose = FALSE;
 
+int numTries = 0;
+char lastMessage[128];
+int messageToBeCNF = FALSE;
+int messageToResend = FALSE;
+
 int fd_udp, fd_tcp;
 User *users;
 Transaction *transactions;
@@ -55,7 +60,17 @@ void printv(char *message) { // TODO move to common file
     if (verbose == TRUE) printf("%s\n", message);
 }
 
-void endFS() {
+void readGarbage(int fd, int size) {
+    char c;
+    int n, i;
+    for (i = 0; i < size; i++) {
+        n = read(fd, &c, 1);
+        if (n == -1)
+            printError("read()");
+    }
+}
+
+void exitFS() {
     int i;
     freeaddrinfo(res_udp);
     close(fd_udp);
@@ -63,11 +78,35 @@ void endFS() {
     close(fd_tcp);
     for (i = 0; i < numClients; i++)
         close(users[i]->fd);
-    printv("Ending FS...\n");
+    printv("Ending FS...");
     exit(0);
 }
 
-/*      === auxiliar functions ===       */
+/*      === sighandler functions ===       */
+
+void resendHandler() {
+    messageToResend = TRUE;
+}
+
+/*      === resend messages that were not acknowledge ===       */
+
+void resetLastMessage() {
+    messageToBeCNF = FALSE;
+    lastMessage[0] = '\0';
+    numTries = 0;
+    alarm(0);
+}
+
+void resendMessage() {
+    int n;
+    messageToResend = FALSE;
+    if (numTries++ > 2) exitFS();
+    n = sendto(fd_udp, lastMessage, strlen(lastMessage) * sizeof(char), 0, res_udp->ai_addr, res_udp->ai_addrlen);
+    if (n == -1) errorExit("sendto()");
+    alarm(2);
+}
+
+/*      === auxiliary functions ===       */
 
 int readUntilSpace(int ind, char *buffer) { // TODO function common to other files?
     char c;
@@ -76,9 +115,7 @@ int readUntilSpace(int ind, char *buffer) { // TODO function common to other fil
     do {
         n = read(users[ind]->fd, &c, 1);
         count += n;
-        if (n == -1)
-            printError("read()");
-        else if (n == 0) {
+        if (n <= 0) {
             close(users[ind]->fd);
 
             users[ind] = NULL;
@@ -117,7 +154,7 @@ void sendNokReply(int fd, Transaction transaction) {
 void listFiles(int fd, Transaction transaction) {
     DIR *d;
     FILE *file;
-    char dirpath[32], message[270], files[400], reply[400], filepath[260];
+    char dirpath[32], message[270], files[400], reply[512], filepath[512];
     struct dirent *dir;
     int fsize, n_files = 0;
     sprintf(dirpath, "USERS/UID%s/FILES", transaction->uid);
@@ -176,7 +213,7 @@ void deleteFile(int fd, Transaction transaction) {
 
 void retrieveFile(int fd, Transaction transaction) {
     //TODO RRT NOK, ERR
-    int n, fsize;
+    int n, fsize, count;
     char message[128], buffer[128], path[64];
     FILE *file;
 
@@ -200,10 +237,12 @@ void retrieveFile(int fd, Transaction transaction) {
     n = write(fd, message, strlen(message));
     if (n == -1) errorExit("write()");
 
-    while (fgets(buffer, 128, (FILE *)file) != NULL) {
-        n = write(fd, buffer, strlen(buffer));
+    do {
+        count = fread(buffer, 1, 128, (FILE *)file);
+        n = write(fd, buffer, count);
         if (n == -1) errorExit("write()");
-    }
+    } while (count == 128);
+
     fclose(file);
 }
 
@@ -212,8 +251,12 @@ void uploadFile(int ind, Transaction transaction) {
     FILE *file;
     struct dirent *dir;
     char message[128];
-    char data[128], dirpath[32], filepath[32], c;
-    int n, i, charCount = 0, size, n_files = 0;
+    char dirpath[32], filepath[64], c;
+    int n, i, size, n_files = 0;
+
+    printf("inside uploadFile\n"); // DEBUG
+
+    sscanf(transaction->fsize, "%d", &size);
 
     sprintf(dirpath, "USERS/UID%s/FILES", transaction->uid);
     mkdir(dirpath, 0777);
@@ -221,6 +264,7 @@ void uploadFile(int ind, Transaction transaction) {
     if (d) {
         while ((dir = readdir(d)) != NULL) {
             if (!strcmp(dir->d_name, transaction->fname)) {
+                readGarbage(users[ind]->fd, size);
                 n = write(users[ind]->fd, "RUP DUP\n", 8);
                 if (n == -1) errorExit("write()");
                 return;
@@ -231,6 +275,7 @@ void uploadFile(int ind, Transaction transaction) {
     }
 
     if (n_files == 15) {
+        readGarbage(users[ind]->fd, size);
         n = write(users[ind]->fd, "RUP FULL\n", 9);
         if (n == -1) errorExit("write()");
         return;
@@ -238,8 +283,6 @@ void uploadFile(int ind, Transaction transaction) {
 
     sprintf(filepath, "%s/%s", dirpath, transaction->fname);
     file = fopen(filepath, "w");
-
-    sscanf(transaction->fsize, "%d", &size);
 
     for (i = 0; i < size; i++) {
         n = read(users[ind]->fd, &c, 1);
@@ -263,7 +306,7 @@ void uploadFile(int ind, Transaction transaction) {
 }
 
 void removeAll(int fd, Transaction transaction) {
-    char message[128], dirpath[64], filepath[64];
+    char message[128], dirpath[64], filepath[512];
     int n;
     struct dirent *dir;
     DIR *d;
@@ -289,17 +332,17 @@ void removeAll(int fd, Transaction transaction) {
 
 /*      === user manager ===        */
 
+// receive new connection from user
 void userSession(int ind) {
     int n, i;
     char buffer[128], message[128], command[5], uid[32], tid[32], fname[32], fsize[32], type[32];
 
-    n = readUntilSpace(ind, command);
+    if (!readUntilSpace(ind, command)) return;
 
-    if (users[ind] == NULL)
-        return;
+    if (users[ind] == NULL) return;
 
-    readUntilSpace(ind, uid);
-    readUntilSpace(ind, tid);
+    if (!readUntilSpace(ind, uid)) return;
+    if (!readUntilSpace(ind, tid)) return;
 
     strcpy(users[ind]->uid, uid);
 
@@ -311,12 +354,14 @@ void userSession(int ind) {
             break;
         }
     }
-    if (i == numTransactions) {
+    if (i == numTransactions + 1) {
         numTransactions++;
-        transactions = (Transaction *)realloc(transactions, sizeof(Transaction) * (numTransactions + 1));
+        transactions = (Transaction *)realloc(transactions, sizeof(Transaction) * (numTransactions));
         transactions[numTransactions] = NULL;
     }
-    //sscanf(buffer, "%s %s %s", command, uid, tid);
+
+    sprintf(message, "received from User: %s %s %s %s", command, uid, tid, transactions[i]->fop);
+    printv(message);
 
     if (!strcmp(command, "RTV") || !strcmp(command, "DEL")) {
         if (!strcmp(command, "RTV")) {
@@ -327,15 +372,16 @@ void userSession(int ind) {
             strcpy(type, "delete");
             strcpy(transactions[i]->fop, "D");
         }
-        readUntilSpace(ind, fname);
+        if (!readUntilSpace(ind, fname)) return;
         //sscanf(buffer, "%s %s %s %s", command, uid, tid, fname);
         sprintf(buffer, "UID=%s: %s %s", uid, type, fname);
 
         strcpy(transactions[i]->fname, fname);
 
     } else if (!strcmp(command, "UPL")) {
-        readUntilSpace(ind, fname);
-        readUntilSpace(ind, fsize);
+        printf("received upload request from user\n");
+        if (!readUntilSpace(ind, fname)) return;
+        if (!readUntilSpace(ind, fsize)) return;
         //sscanf(buffer, "%s %s %s %s %s", command, uid, tid, fname, fsize);
         sprintf(buffer, "UID=%s: upload %s (%s Bytes)", uid, fname, fsize);
         strcpy(transactions[i]->fop, "U");
@@ -357,6 +403,7 @@ void userSession(int ind) {
     n = sendto(fd_udp, message, strlen(message), 0, res_udp->ai_addr, res_udp->ai_addrlen);
     if (n == -1) printError("validateOperation: sendto()");
 
+    messageToBeCNF = TRUE;
     users[ind]->pending = TRUE;
 }
 
@@ -384,14 +431,18 @@ void sendInvReply(Transaction transaction) {
     if (n == -1) printError("write()"); */
 }
 
+// receive message from AS
 void doOperation(char *buffer) {
-    char uid[7], tid[6], command[5];
-    char *reply;
+    char uid[7], tid[6], command[5], message[64];
     int n, i, j, fd = 0;
     char fop;
-    reply = (char *)malloc(sizeof(char) * 128);
+
     sscanf(buffer, "%s %s %s %c", command, uid, tid, &fop);
+    sprintf(message, "received from AS: %s %s %s %c", command, uid, tid, fop);
+    printv(message);
+
     if (!strcmp(command, "CNF")) {
+        resetLastMessage();
         for (i = 0; i < numTransactions; i++) {
             if (!strcmp(tid, transactions[i]->tid))
                 break;
@@ -439,10 +490,10 @@ void doOperation(char *buffer) {
         }
         printv("operation validated");
         transactions[i] = NULL;
-    } else
-        strcpy(reply, "ERR\n");
-    n = write(fd, reply, strlen(reply));
-    if (n == -1) printError("doOperation: write()");
+    } else {
+        n = write(fd, "ERR\n", 4);
+        if (n == -1) printError("doOperation: write()");
+    }
 
     users[j]->pending = FALSE;
 }
@@ -454,6 +505,8 @@ void fdManager() {
     int i, n, maxfdp1;
 
     while (1) {
+        if (messageToResend) resendMessage();
+
         FD_ZERO(&rset);
         FD_SET(fd_udp, &rset);
         FD_SET(fd_tcp, &rset);
@@ -473,6 +526,7 @@ void fdManager() {
         maxfdp1++;
 
         select(maxfdp1, &rset, NULL, NULL, NULL);
+        if (n == -1) continue; // if interrupted by signals
 
         if (FD_ISSET(fd_udp, &rset)) { // receive message from AS
             n = recvfrom(fd_udp, buffer, 128, 0, (struct sockaddr *)&addr_udp, &addrlen_udp);
@@ -492,17 +546,18 @@ void fdManager() {
                     break;
                 }
             }
-            if (i == numClients) {
+            if (i == numClients + 1) {
                 numClients++;
-                users = (User *)realloc(users, sizeof(User) * (numClients + 1));
+                users = (User *)realloc(users, sizeof(User) * (numClients));
                 users[numClients] = NULL;
             }
         }
-
-        for (i = 0; i < numClients; i++) { // receive command from User
-            if (users[i] != NULL && !users[i]->pending) {
-                if (FD_ISSET(users[i]->fd, &rset)) {
-                    userSession(i);
+        if (!messageToBeCNF) {
+            for (i = 0; i < numClients; i++) { // receive command from User
+                if (users[i] != NULL && !users[i]->pending) {
+                    if (FD_ISSET(users[i]->fd, &rset)) {
+                        userSession(i);
+                    }
                 }
             }
         }
@@ -549,7 +604,8 @@ int main(int argc, char *argv[]) {
     transactions = (Transaction *)malloc(sizeof(Transaction));
     transactions[0] = NULL;
 
-    signal(SIGINT, endFS);
+    signal(SIGINT, exitFS);
+    signal(SIGALRM, resendHandler);
 
     fdManager();
 

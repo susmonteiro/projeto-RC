@@ -24,11 +24,6 @@
 
 #define MAX(a, b) a *(a > b) + b *(b >= a)
 
-typedef struct user {
-    int fd;
-    char uid[7];
-} * User;
-
 typedef struct request {
     char uid[7];
     char rid[5];
@@ -38,9 +33,21 @@ typedef struct request {
     char fname[32];
 } * Request;
 
+typedef struct user {
+    int fd;
+    char uid[7];
+    int numTries;
+    int messageToBeCNF;
+    char lastMessage[128];
+    int pd_fd;
+    struct addrinfo *pd_res;
+    struct request pendingRequest;
+} * User;
+
 int numClients = 0;
 int numRequests = 0;
 int verbose = FALSE;
+int messageToResend = FALSE;
 
 int fd_udp, fd_tcp;
 User *users;
@@ -56,6 +63,59 @@ char asport[8];
 // print if verbose mode
 void printv(char *message) {
     if (verbose) printf("%s\n", message);
+}
+
+/*      === sighandler functions ===       */
+
+void resendHandler() {
+    messageToResend = TRUE;
+}
+
+/*      === resend messages that were not acknowledge ===       */
+
+void resetLastMessage(User user) {
+    user->messageToBeCNF = FALSE;
+    user->numTries = 0;
+    user->lastMessage[0] = '\0';
+    alarm(0);
+}
+
+void resendMessage() {
+    int n, i;
+    messageToResend = FALSE;
+
+    for (i = 0; i < numClients; i++) {
+        if (users[i] == NULL) continue;
+        if (users[i]->numTries++ > 2) {
+            n = write(users[i]->fd, "RRQ EPD\n", 6);
+            if (n == -1) printError("resendMessage: write()");
+            continue;
+        }
+        n = sendto(users[i]->pd_fd, users[i]->lastMessage, strlen(users[i]->lastMessage) * sizeof(char), 0, users[i]->pd_res->ai_addr, users[i]->pd_res->ai_addrlen);
+        if (n == -1) errorExit("sendto()");
+    }
+    alarm(2);
+}
+
+/*      === end AS ===       */
+
+void freePDconnection() {
+    printf("Exiting...\n");
+    freeaddrinfo(res_udp);
+    close(fd_udp);
+    exit(0);
+}
+
+void exitAS() {
+    int i = 0;
+    freeaddrinfo(res_tcp);
+    close(fd_tcp);
+    for (i = 0; i < numClients; i++) {
+        if (users[i] != NULL) {
+            close(users[i]->fd);
+        }
+    }
+    freePDconnection();
 }
 
 char *login(User userInfo, char *uid, char *pass) {
@@ -84,35 +144,46 @@ char *login(User userInfo, char *uid, char *pass) {
     return "RLO OK\n";
 }
 
-char *request(User userInfo, char *uid, char *rid, char *fop, char *fname) {
+void request(User userInfo, char *uid, char *rid, char *fop, char *fname) {
     char buffer[64], path[64], pdport[32], pdip[32], vc[5];
-    int n, i, fd;
+    int n, i;
     FILE *file;
-    struct addrinfo *res;
 
-    if (strcmp(fop, "F") && strcmp(fop, "R") && strcmp(fop, "U") && strcmp(fop, "D") && strcmp(fop, "X") && strcmp(fop, "L"))
-        return "RRQ EFOP\n";
+    if (strcmp(fop, "E") && strcmp(fop, "R") && strcmp(fop, "U") && strcmp(fop, "D") && strcmp(fop, "X") && strcmp(fop, "L")) {
+        n = write(userInfo->fd, "RRQ EFOP\n", 9);
+        if (n == -1) printError("userSession: write()");
+        return;
+    }
 
     sprintf(path, "USERS/UID%s/UID%s_login.txt", uid, uid);
-    if (access(path, F_OK) == -1)
-        return "RRQ ELOG\n";
+    if (access(path, F_OK) == -1) {
+        n = write(userInfo->fd, "RRQ ELOG\n", 9);
+        if (n == -1) printError("userSession: write()");
+        return;
+    }
 
-    if (strcmp(userInfo->uid, uid))
-        return "RRQ EUSER\n";
+    if (strcmp(userInfo->uid, uid)) {
+        n = write(userInfo->fd, "RRQ EUSER\n", 10);
+        if (n == -1) printError("userSession: write()");
+        return;
+    }
 
     sprintf(path, "USERS/UID%s/UID%s_reg.txt", uid, uid);
-    if ((file = fopen(path, "r")) == NULL)
-        return "RRQ EPD\n";
+    if ((file = fopen(path, "r")) == NULL) {
+        n = write(userInfo->fd, "RRQ EPD\n", 8);
+        if (n == -1) printError("userSession: write()");
+        return;
+    }
     fscanf(file, "%s\n%s", pdip, pdport);
     fclose(file);
 
     printf("%s %s\n", pdip, pdport);
 
-    udpConnect(pdip, pdport, &fd, &res);
+    udpConnect(pdip, pdport, &userInfo->pd_fd, &userInfo->pd_res);
 
     sprintf(vc, "%04d", rand() % 10000);
 
-    if (fname[0] == '\0') {
+    if (!strcmp(fop, "L") || !strcmp(fop, "X") || !strcmp(fop, "E")) {
         sprintf(buffer, "User: %s req, UID=%s, RID=%s VC=%s", fop, uid, rid, vc);
         printv(buffer);
         sprintf(buffer, "VLC %s %s %s\n", uid, vc, fop);
@@ -121,15 +192,6 @@ char *request(User userInfo, char *uid, char *rid, char *fop, char *fname) {
         printv(buffer);
         sprintf(buffer, "VLC %s %s %s %s\n", uid, vc, fop, fname);
     }
-
-    n = sendto(fd, buffer, strlen(buffer), 0, res->ai_addr, res->ai_addrlen);
-    if (n == -1) printError("request: sendto()");
-    // TODO retry and return EPD if failed
-
-    recvfrom(fd, buffer, 32, 0, (struct sockaddr *)&addr_udp, &addrlen_udp);
-
-    if (!strcmp(buffer, "RVC NOK\n"))
-        return "RRQ EPD\n";
 
     for (i = 0; i < numRequests + 1; i++) {
         if (requests[i] == NULL) {
@@ -142,16 +204,47 @@ char *request(User userInfo, char *uid, char *rid, char *fop, char *fname) {
             break;
         }
     }
-    if (i == numRequests) {
+    if (i == numRequests + 1) {
         numRequests++;
-        requests = (Request *)realloc(requests, sizeof(Request) * (numRequests + 1));
+        requests = (Request *)realloc(requests, sizeof(Request) * (numRequests));
         requests[numRequests] = NULL;
     }
 
-    close(fd);
-    freeaddrinfo(res);
+    n = sendto(userInfo->pd_fd, buffer, strlen(buffer), 0, userInfo->pd_res->ai_addr, userInfo->pd_res->ai_addrlen);
+    if (n == -1) printError("request: sendto()");
 
-    return "RRQ OK\n";
+    userInfo->messageToBeCNF = TRUE;
+}
+
+void requestReply(User userInfo) {
+    char buffer[64];
+    int i, n;
+    socklen_t addrlen_udp;
+    struct sockaddr_in addr_udp;
+
+    recvfrom(userInfo->pd_fd, buffer, 32, 0, (struct sockaddr *)&addr_udp, &addrlen_udp);
+
+    if (!strcmp(buffer, "RVC NOK\n")) {
+        close(userInfo->pd_fd);
+        freeaddrinfo(userInfo->pd_res);
+        for (i = 0; i < numRequests + 1; i++) {
+            if (!strcmp(requests[i]->uid, userInfo->uid)) {
+                requests[i] = NULL;
+                break;
+            }
+        }
+        n = write(userInfo->fd, "RRQ EUSER\n", 10);
+        if (n == -1) printError("requestReply: write()");
+        resetLastMessage(userInfo);
+        return;
+    }
+
+    resetLastMessage(userInfo);
+
+    close(userInfo->pd_fd);
+    freeaddrinfo(userInfo->pd_res);
+    n = write(userInfo->fd, "RRQ OK\n", 5);
+    if (n == -1) printError("userSession: write()");
 }
 
 char *secondAuth(char *uid, char *rid, char *vc) {
@@ -190,6 +283,7 @@ char *secondAuth(char *uid, char *rid, char *vc) {
 void userSession(User userInfo) {
     int n;
     char buffer[128], msg[256], path[64], command[5], uid[32], rid[32], fop[32], vc[32], fname[32];
+    printf("user session\n"); //DEBUG
 
     n = read(userInfo->fd, buffer, 128);
     if (n == -1) {
@@ -214,15 +308,17 @@ void userSession(User userInfo) {
     if (!strcmp(command, "LOG")) {
         sscanf(buffer, "%s %s %s", command, uid, rid);
         strcpy(buffer, login(userInfo, uid, rid));
+        n = write(userInfo->fd, buffer, strlen(buffer));
+        if (n == -1) printError("userSession: write()");
     } else if (!strcmp(command, "REQ")) {
         sscanf(buffer, "%s %s %s %s %s", command, uid, rid, fop, fname);
-        strcpy(buffer, request(userInfo, uid, rid, fop, fname));
+        request(userInfo, uid, rid, fop, fname);
     } else if (!strcmp(command, "AUT")) {
         sscanf(buffer, "%s %s %s %s", command, uid, rid, vc);
         strcpy(buffer, secondAuth(uid, rid, vc));
+        n = write(userInfo->fd, buffer, strlen(buffer));
+        if (n == -1) printError("userSession: write()");
     }
-    n = write(userInfo->fd, buffer, strlen(buffer));
-    if (n == -1) printError("userSession: write()");
 }
 
 char *registration(char *uid, char *pass, char *pdip_new, char *pdport_new) {
@@ -310,6 +406,10 @@ char *validateOperation(char *uid, char *tid) {
 
     if (fop != 'E') fop = requests[i]->fop[0];
 
+    if (fop == 'X') {
+        // TODO remove registration info
+    }
+
     if (fop == 'R' || fop == 'U' || fop == 'D') {
         sprintf(message, "User: UID=%s %c %s, TID=%s", uid, fop, requests[i]->fname, tid);
         printv(message);
@@ -340,27 +440,6 @@ char *applyCommand(char *message) {
     } else {
         return "ERR\n";
     }
-}
-
-void freePDconnection() {
-    printf("Exiting...\n");
-    freeaddrinfo(res_udp);
-    close(fd_udp);
-    exit(0);
-}
-
-void endAS() {
-    int i = 0;
-    // freeaddrinfo(res_udp_client);
-    // close(fd_udp_client);
-    freeaddrinfo(res_tcp);
-    close(fd_tcp);
-    for (i = 0; i < numClients; i++) {
-        if (users[i] != NULL) {
-            close(users[i]->fd);
-        }
-    }
-    freePDconnection();
 }
 
 int main(int argc, char *argv[]) {
@@ -406,9 +485,14 @@ int main(int argc, char *argv[]) {
     connected = TRUE;
     addrlen_udp = sizeof(addr_udp);
 
-    signal(SIGINT, endAS);
+    signal(SIGINT, exitAS);
+    signal(SIGALRM, resendHandler);
 
     while (1) {
+        if (messageToResend) resendMessage();
+
+        printf("inside select\n");
+
         FD_ZERO(&rset);
         FD_SET(fd_udp, &rset);
         // FD_SET(fd_udp_client, &rset);
@@ -420,16 +504,19 @@ int main(int argc, char *argv[]) {
         }
 
         // maxfdp1 = MAX(MAX(fd_tcp, fd_udp), fd_udp_client) + 1;
-        maxfdp1 = MAX(fd_tcp, fd_udp) + 1;
+        maxfdp1 = MAX(fd_tcp, fd_udp);
 
         for (i = 0; i < numClients; i++) {
             if (users[i] != NULL)
-                maxfdp1 = MAX(maxfdp1, users[i]->fd) + 1;
+                maxfdp1 = MAX(maxfdp1, users[i]->fd);
         }
 
-        select(maxfdp1, &rset, NULL, NULL, NULL);
+        maxfdp1++;
 
-        if (FD_ISSET(fd_udp, &rset)) {
+        select(maxfdp1, &rset, NULL, NULL, NULL);
+        if (n == -1) continue; // if interrupted by signals
+
+        if (FD_ISSET(fd_udp, &rset)) { // message from PD or FS
             n = recvfrom(fd_udp, buffer, 128, 0, (struct sockaddr *)&addr_udp, &addrlen_udp);
             if (n == -1) printError("main: recvfrom()");
             buffer[n] = '\0';
@@ -437,10 +524,14 @@ int main(int argc, char *argv[]) {
             n = sendto(fd_udp, applyCommand(buffer), 32, 0, (struct sockaddr *)&addr_udp, addrlen_udp);
             if (n == -1) printError("main: sendto()");
         }
-        if (FD_ISSET(fd_tcp, &rset)) {
+
+        if (FD_ISSET(fd_tcp, &rset)) { // receive user connections
+            printf("received tcp connection\n");
             for (i = 0; i < numClients + 1; i++) {
                 if (users[i] == NULL) {
+                    printf("creating user\n"); //DEBUG
                     users[i] = (User)malloc(sizeof(struct user));
+                    users[i]->messageToBeCNF = FALSE;
                     if ((users[i]->fd = accept(fd_tcp, (struct sockaddr *)&addr_tcp, &addrlen_tcp)) == -1) printError("main: accept()");
                     break;
                 }
@@ -452,8 +543,17 @@ int main(int argc, char *argv[]) {
             }
         }
         for (i = 0; i < numClients; i++) {
-            if (FD_ISSET(users[i]->fd, &rset)) {
-                userSession(users[i]);
+            if (users[i] != NULL) {
+                if (FD_ISSET(users[i]->fd, &rset)) {        // message from user
+                    printf("received message from user\n"); //DEBUG
+                    if (!users[i]->messageToBeCNF)          // does not read message if cannot communicate with PD
+                        userSession(users[i]);
+                    else
+                        printf("user trying to login\n"); //DEBUG
+                }
+                if (FD_ISSET(users[i]->pd_fd, &rset)) { // message from PD
+                    requestReply(users[i]);
+                }
             }
         }
     }
