@@ -86,14 +86,14 @@ void resetLastMessage(User user) {
 void resendMessage() {
     int n, i;
 
-    printf("inside resend message\n"); //DEBUG
+    //printf("inside resend message\n"); //DEBUG
     messageToResend = FALSE;
 
     for (i = 0; i < numClients; i++) {
         if (users[i] == NULL)
             continue;
         if (!users[i]->confirmationPending) {
-            printf("%s\n", users[i]->uid); //DEBUG
+            //printf("%s\n", users[i]->uid); //DEBUG
             continue;
         }
         if (users[i]->numTries++ > 1) {
@@ -102,7 +102,7 @@ void resendMessage() {
                 printError("resendMessage: write()");
             continue;
         }
-        printf("sending message again\n"); //DEBUG
+        //printf("sending message again\n"); //DEBUG
         n = sendto(users[i]->pd_fd, users[i]->lastMessage, strlen(users[i]->lastMessage) * sizeof(char), 0, users[i]->pd_res->ai_addr, users[i]->pd_res->ai_addrlen);
         if (n == -1)
             errorExit("sendto()");
@@ -503,7 +503,7 @@ void fdManager() {
     char buffer[128];
     int i, n, maxfdp1;
     while (1) {
-        printf("inside select\n");
+        //printf("inside select\n");
 
         FD_ZERO(&rset);
         FD_SET(fd_udp, &rset);
@@ -513,7 +513,7 @@ void fdManager() {
         for (i = 0; i < numClients; i++) {
             if (users[i] != NULL) {
                 FD_SET(users[i]->fd, &rset);
-                FD_SET(users[i]->pd_fd, &rset);
+                if (users[i]->confirmationPending) FD_SET(users[i]->pd_fd, &rset);
             }
         }
 
@@ -533,10 +533,12 @@ void fdManager() {
         if (n == -1) { // if interrupted by signals
             if (endAS) exitAS();
             if (messageToResend) resendMessage();
+            //printf("here?\n"); //DEBUG
             continue;
         }
 
-        if (FD_ISSET(fd_udp, &rset)) { // message from PD or FS
+        if (FD_ISSET(fd_udp, &rset)) {         // message from PD or FS
+            printf("message from pd or fs\n"); // DEBUG
             n = recvfrom(fd_udp, buffer, 128, 0, (struct sockaddr *)&addr_udp, &addrlen_udp);
             if (n == -1)
                 printError("main: recvfrom()");
@@ -565,6 +567,8 @@ void fdManager() {
             }
         }
         for (i = 0; i < numClients; i++) {
+            printf("message from user\n"); // DEBUG
+
             if (users[i] != NULL) {
                 if (FD_ISSET(users[i]->fd, &rset)) {        // message from user
                     printf("received message from user\n"); //DEBUG
