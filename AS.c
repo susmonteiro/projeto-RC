@@ -2,6 +2,7 @@
 #include "connection.h"
 #include "error.h"
 #include <arpa/inet.h>
+#include <dirent.h>
 #include <errno.h>
 #include <netdb.h>
 #include <netinet/in.h>
@@ -19,9 +20,6 @@
 #define MAXARGS 4
 #define MINARGS 1
 
-#define TRUE 1
-#define FALSE 0
-
 #define MAX(a, b) a *(a > b) + b *(b >= a)
 
 typedef struct request {
@@ -37,7 +35,7 @@ typedef struct user {
     int fd;
     char uid[7];
     int numTries;
-    int messageToBeCNF;
+    int confirmationPending;
     char lastMessage[128];
     int pd_fd;
     struct addrinfo *pd_res;
@@ -69,10 +67,9 @@ void printv(char *message) {
 /*      === resend messages that were not acknowledge ===       */
 
 void resetLastMessage(User user) {
-    user->messageToBeCNF = FALSE;
+    user->confirmationPending = FALSE;
     user->numTries = 0;
     user->lastMessage[0] = '\0';
-    alarm(0);
 }
 
 void resendMessage() {
@@ -136,6 +133,8 @@ char *login(User userInfo, char *uid, char *pass) {
         fclose(file);
         if (strcmp(currentPass, pass))
             return "RLO NOK\n";
+    } else {
+        return "RLO NOK\n";
     }
 
     sprintf(path, "USERS/UID%s/UID%s_login.txt", uid, uid);
@@ -158,31 +157,35 @@ void request(User userInfo, char *uid, char *rid, char *fop, char *fname) {
 
     if (strcmp(fop, "E") && strcmp(fop, "R") && strcmp(fop, "U") && strcmp(fop, "D") && strcmp(fop, "X") && strcmp(fop, "L")) {
         n = write(userInfo->fd, "RRQ EFOP\n", 9);
-        if (n == -1)
-            printError("userSession: write()");
+        if (n == -1) printError("userSession: write()");
+        close(userInfo->pd_fd);
+        freeaddrinfo(userInfo->pd_res);
         return;
     }
 
     sprintf(path, "USERS/UID%s/UID%s_login.txt", uid, uid);
     if (access(path, F_OK) == -1) {
         n = write(userInfo->fd, "RRQ ELOG\n", 9);
-        if (n == -1)
-            printError("userSession: write()");
+        if (n == -1) printError("userSession: write()");
+        close(userInfo->pd_fd);
+        freeaddrinfo(userInfo->pd_res);
         return;
     }
 
     if (strcmp(userInfo->uid, uid)) {
         n = write(userInfo->fd, "RRQ EUSER\n", 10);
-        if (n == -1)
-            printError("userSession: write()");
+        if (n == -1) printError("userSession: write()");
+        close(userInfo->pd_fd);
+        freeaddrinfo(userInfo->pd_res);
         return;
     }
 
     sprintf(path, "USERS/UID%s/UID%s_reg.txt", uid, uid);
     if ((file = fopen(path, "r")) == NULL) {
         n = write(userInfo->fd, "RRQ EPD\n", 8);
-        if (n == -1)
-            printError("userSession: write()");
+        if (n == -1) printError("userSession: write()");
+        close(userInfo->pd_fd);
+        freeaddrinfo(userInfo->pd_res);
         return;
     }
     fscanf(file, "%s\n%s", pdip, pdport);
@@ -191,6 +194,7 @@ void request(User userInfo, char *uid, char *rid, char *fop, char *fname) {
     printf("%s %s\n", pdip, pdport);
 
     udpConnect(pdip, pdport, &userInfo->pd_fd, &userInfo->pd_res);
+    printf("%d\n", userInfo->pd_fd); // DEBUG
 
     sprintf(vc, "%04d", rand() % 10000);
 
@@ -225,40 +229,53 @@ void request(User userInfo, char *uid, char *rid, char *fop, char *fname) {
     if (n == -1)
         printError("request: sendto()");
 
-    userInfo->messageToBeCNF = TRUE;
+    userInfo->confirmationPending = TRUE;
 }
 
 void requestReply(User userInfo) {
-    char buffer[64];
-    int i, n;
+    char buffer[64], command[8], uid[8], status[8];
+    int i, n, allGoodMyDude = FALSE;
     socklen_t addrlen_udp;
     struct sockaddr_in addr_udp;
 
     recvfrom(userInfo->pd_fd, buffer, 32, 0, (struct sockaddr *)&addr_udp, &addrlen_udp);
 
-    if (!strcmp(buffer, "RVC NOK\n")) {
-        close(userInfo->pd_fd);
-        freeaddrinfo(userInfo->pd_res);
+    sscanf(buffer, "%s %s %s", command, uid, status);
+    puts(buffer);
+
+    if (strcmp("RVC", command)) {
+        puts(command);
+        strcpy(buffer, "ERR\n");
+    } else if (strcmp(userInfo->uid, uid)) {
+        strcpy(buffer, "RRQ EUSER\n");
+    } else if (!strcmp(status, "NOK")) {
+        strcpy(buffer, "ERR\n");
+    } else if (!strcmp(status, "OK")) {
+        strcpy(buffer, "RRQ OK\n");
+        allGoodMyDude = TRUE;
+    } else {
+        strcpy(buffer, "ERR\n");
+    }
+
+    if (!allGoodMyDude) {
         for (i = 0; i < numRequests + 1; i++) {
             if (!strcmp(requests[i]->uid, userInfo->uid)) {
                 requests[i] = NULL;
                 break;
             }
         }
-        n = write(userInfo->fd, "RRQ EUSER\n", 10);
-        if (n == -1)
-            printError("requestReply: write()");
-        resetLastMessage(userInfo);
-        return;
     }
 
     resetLastMessage(userInfo);
+    printf("can i send messages momma? plsplspls %d\n", userInfo->confirmationPending);
+    puts(buffer); //DEBUG
 
     close(userInfo->pd_fd);
     freeaddrinfo(userInfo->pd_res);
-    n = write(userInfo->fd, "RRQ OK\n", 5);
-    if (n == -1)
-        printError("userSession: write()");
+    n = write(userInfo->fd, buffer, strlen(buffer));
+    if (n == -1) printError("userSession: write()");
+    printf("i sent %d to user\n", n); //DEBUG
+    return;
 }
 
 char *secondAuth(char *uid, char *rid, char *vc) {
@@ -387,9 +404,11 @@ char *unregistration(char *uid, char *pass) {
 char *validateOperation(char *uid, char *tid) {
     // message - VLD UIF TID
     int i, j;
-    char message[128], error[128];
+    char message[128], error[128], dirpath[64], filepath[512];
     char *reply;
     char fop = 'A';
+    struct dirent *dir;
+    DIR *d;
 
     printf("inside validate operation\n");
 
@@ -424,7 +443,17 @@ char *validateOperation(char *uid, char *tid) {
         fop = requests[i]->fop[0];
 
     if (fop == 'X') {
-        // TODO remove registration info
+        sprintf(dirpath, "USERS/UID%s", requests[i]->uid);
+        d = opendir(dirpath);
+        if (d) {
+            while ((dir = readdir(d)) != NULL) {
+                if (dir->d_name[0] != '.') {
+                    sprintf(filepath, "%s/%s", dirpath, dir->d_name);
+                    remove(filepath);
+                }
+            }
+            closedir(d);
+        }
     }
 
     if (fop == 'R' || fop == 'U' || fop == 'D') {
@@ -463,6 +492,48 @@ void fdManager() {
     char buffer[128];
     int i, n, maxfdp1;
 
+    if (argc < MINARGS || argc > MAXARGS) {
+        printf("​Usage: %s -p [ASport] [-v]\n", argv[0]);
+        printError("incorrect number of arguments");
+    }
+
+    strcpy(asport, ASPORT);
+
+    for (i = MINARGS; i < argc; i++) {
+        if (!strcmp(argv[i], "-h")) {
+            printf("​Usage: %s -p [ASport] [-v]\n", argv[0]);
+            exit(0);
+        } else if (!strcmp(argv[i], "-v")) {
+            verbose = TRUE;
+        } else if (!strcmp(argv[i], "-p")) {
+            if (i + 1 == argc) {
+                printf("​Usage: %s -p [ASport] [-v]\n", argv[0]);
+                printError("incorrect number of arguments");
+            }
+            strcpy(asport, argv[++i]);
+        }
+    }
+
+    srand(time(NULL));
+
+    mkdir("USERS", 0777);
+
+    tcpOpenConnection(asport, &fd_tcp, &res_tcp);
+    if (listen(fd_tcp, 5) == -1) printError("TCP: listen()");
+
+    users = (User *)malloc(sizeof(User));
+    users[0] = NULL;
+
+    requests = (Request *)malloc(sizeof(Request));
+    requests[0] = NULL;
+
+    udpOpenConnection(asport, &fd_udp, &res_udp);
+    connected = TRUE;
+    addrlen_udp = sizeof(addr_udp);
+
+    signal(SIGINT, exitAS);
+    //signal(SIGALRM, resendHandler);
+
     while (1) {
         alarm(5);
 
@@ -474,16 +545,20 @@ void fdManager() {
         FD_SET(fd_tcp, &rset);
 
         for (i = 0; i < numClients; i++) {
-            if (users[i] != NULL)
+            if (users[i] != NULL) {
                 FD_SET(users[i]->fd, &rset);
+                FD_SET(users[i]->pd_fd, &rset);
+            }
         }
 
         // maxfdp1 = MAX(MAX(fd_tcp, fd_udp), fd_udp_client) + 1;
         maxfdp1 = MAX(fd_tcp, fd_udp);
 
         for (i = 0; i < numClients; i++) {
-            if (users[i] != NULL)
+            if (users[i] != NULL) {
                 maxfdp1 = MAX(maxfdp1, users[i]->fd);
+                maxfdp1 = MAX(maxfdp1, users[i]->pd_fd);
+            }
         }
 
         maxfdp1++;
@@ -509,9 +584,8 @@ void fdManager() {
                 if (users[i] == NULL) {
                     printf("creating user\n"); //DEBUG
                     users[i] = (User)malloc(sizeof(struct user));
-                    users[i]->messageToBeCNF = FALSE;
-                    if ((users[i]->fd = accept(fd_tcp, (struct sockaddr *)&addr_tcp, &addrlen_tcp)) == -1)
-                        printError("main: accept()");
+                    users[i]->confirmationPending = FALSE;
+                    if ((users[i]->fd = accept(fd_tcp, (struct sockaddr *)&addr_tcp, &addrlen_tcp)) == -1) printError("main: accept()");
                     break;
                 }
             }
@@ -525,12 +599,14 @@ void fdManager() {
             if (users[i] != NULL) {
                 if (FD_ISSET(users[i]->fd, &rset)) {        // message from user
                     printf("received message from user\n"); //DEBUG
-                    if (!users[i]->messageToBeCNF)          // does not read message if cannot communicate with PD
+                    if (!users[i]->confirmationPending) {   // does not read message if cannot communicate with PD
                         userSession(users[i]);
-                    else
+                    } else {
                         printf("user trying to login\n"); //DEBUG
+                    }
                 }
-                if (FD_ISSET(users[i]->pd_fd, &rset)) { // message from PD
+                if (FD_ISSET(users[i]->pd_fd, &rset)) {   // message from PD
+                    printf("received message from PD\n"); // DEBUG
                     requestReply(users[i]);
                 }
             }
