@@ -374,12 +374,20 @@ int main(int argc, char *argv[]) {
     strcpy(asport, ASPORT);
 
     for (i = MINARGS; i < argc; i++) {
+<<<<<<< HEAD
         if (!strcmp(argv[i], "-v")) {
             verbose = TRUE;
         } else if (!strcmp(argv[i], "-h") || i + 1 == argc) {
+=======
+        if (!strcmp(argv[i], "-h")) {
+>>>>>>> 606517137013fbc63bc05cc5a59b74dc1d4cec78
             printf("​Usage: %s -p [ASport] [-v]\n", argv[0]);
             exit(0);
         } else if (!strcmp(argv[i], "-p")) {
+            if (i + 1 == argc) {
+                printf("​Usage: %s -p [ASport] [-v]\n", argv[0]);
+                printError("incorrect number of arguments");
+            }
             strcpy(asport, argv[++i]);
         }
     }
