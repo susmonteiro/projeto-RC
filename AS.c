@@ -284,7 +284,7 @@ char *validateOperation(char *uid, char *tid) {
     reply = (char *)malloc(128 * sizeof(char));
 
     for (i = 0; i < numRequests; i++) {
-        if (!strcmp(tid, requests[i]->tid))
+        if (requests[i] != NULL && !strcmp(tid, requests[i]->tid))
             break;
     }
     if (i == numRequests) {
