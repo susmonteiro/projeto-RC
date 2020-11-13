@@ -14,7 +14,7 @@
 #define PDPORT "57022"
 
 // IP address of the machine where the file server (FS)
-#define FSIP "localhost"
+#define FSIP "tejo.tecnico.ulisboa.pt"
 // well-known TCP port where the FS server accepts requests
 // 59000 + GN --> 59022
-#define FSPORT "59022"
+#define FSPORT "59000"

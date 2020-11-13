@@ -59,6 +59,11 @@ void tcpOpenConnection(char *port, int *fd, struct addrinfo **res) {
     errcode = getaddrinfo(NULL, port, &hints, res);
     if (errcode != 0) errorExit("tcpOpenConnection: getaddrinfo()");
 
+    int flag = 1;
+    if (setsockopt(*fd, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(flag)) == -1) {
+        errorExit("setsockopt fail");
+    }
+
     n = bind(*fd, (*res)->ai_addr, (*res)->ai_addrlen);
     if (n == -1) errorExit("tcpOpenConnection: bind()");
 }
