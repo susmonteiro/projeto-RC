@@ -15,6 +15,7 @@ The PD application can also receive a command to exit, unregistering the user.
 
 #include "config.h"
 #include "connection.h"
+#include "error.h"
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netdb.h>
@@ -62,13 +63,14 @@ int maxfdp1, registered = NOT_REGISTERED;
 
 /*      === error functions ===       */
 
-void errorExit(char *errorMessage) {
+// Funcao esta em error.c
+/*void errorExit(char *errorMessage) {
     if (errno != 0)
         printf("ERR: %s: %s\nExiting...\n", errorMessage, strerror(errno));
     else
         printf("ERR: %s\nExiting...\n", errorMessage);
     freePD();
-}
+}*/
 
 /*      === sighandler functions ===       */
 

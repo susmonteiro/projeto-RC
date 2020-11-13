@@ -36,8 +36,8 @@ typedef struct transaction {
     char fsize[32];
 } * Transaction;
 
-int numClients = 0;
-int numTransactions = 0;
+int numClients = 1;
+int numTransactions = 1;
 int verbose = FALSE;
 
 int fd_udp, fd_tcp;
@@ -212,8 +212,8 @@ void uploadFile(int ind, Transaction transaction) {
     FILE *file;
     struct dirent *dir;
     char message[128];
-    char data[128], dirpath[32], filepath[32], c;
-    int n, i, charCount = 0, size, n_files = 0;
+    char dirpath[32], filepath[32], c;
+    int n, i, size, n_files = 0;
 
     sprintf(dirpath, "USERS/UID%s/FILES", transaction->uid);
     mkdir(dirpath, 0777);
@@ -295,15 +295,16 @@ void userSession(int ind) {
 
     n = readUntilSpace(ind, command);
 
-    if (users[ind] == NULL)
+    if (users[ind] == NULL) {
         return;
+    }
 
     readUntilSpace(ind, uid);
     readUntilSpace(ind, tid);
 
     strcpy(users[ind]->uid, uid);
 
-    for (i = 0; i < numTransactions + 1; i++) {
+    for (i = 0; i < numTransactions; i++) {
         if (transactions[i] == NULL) {
             transactions[i] = (Transaction)malloc(sizeof(struct transaction));
             strcpy(transactions[i]->uid, uid);
@@ -313,8 +314,8 @@ void userSession(int ind) {
     }
     if (i == numTransactions) {
         numTransactions++;
-        transactions = (Transaction *)realloc(transactions, sizeof(Transaction) * (numTransactions + 1));
-        transactions[numTransactions] = NULL;
+        transactions = (Transaction *)realloc(transactions, sizeof(Transaction) * (numTransactions));
+        transactions[numTransactions-1] = NULL;
     }
     //sscanf(buffer, "%s %s %s", command, uid, tid);
 
@@ -398,6 +399,7 @@ void doOperation(char *buffer) {
         }
         if (i == numTransactions) {
             printv("Error: Transaction was not found");
+            users[j]->pending = FALSE;
             return;
         }
 
@@ -413,7 +415,8 @@ void doOperation(char *buffer) {
             for (j = 0; j < numClients; j++) {
                 if (!strcmp(users[j]->uid, transactions[i]->uid)) {
                     sendNokReply(users[j]->fd, transactions[i]);
-                    break;
+                    users[j]->pending = FALSE;
+                    return;
                 }
             }
         }
@@ -443,7 +446,6 @@ void doOperation(char *buffer) {
         strcpy(reply, "ERR\n");
     n = write(fd, reply, strlen(reply));
     if (n == -1) printError("doOperation: write()");
-
     users[j]->pending = FALSE;
 }
 
@@ -483,7 +485,7 @@ void fdManager() {
         }
 
         if (FD_ISSET(fd_tcp, &rset)) { // receive new connection from user
-            for (i = 0; i < numClients + 1; i++) {
+            for (i = 0; i < numClients; i++) {
                 if (users[i] == NULL) {
                     users[i] = (User)malloc(sizeof(struct user));
                     users[i]->pending = FALSE;
@@ -494,8 +496,8 @@ void fdManager() {
             }
             if (i == numClients) {
                 numClients++;
-                users = (User *)realloc(users, sizeof(User) * (numClients + 1));
-                users[numClients] = NULL;
+                users = (User *)realloc(users, sizeof(User) * (numClients));
+                users[numClients-1] = NULL;
             }
         }
 

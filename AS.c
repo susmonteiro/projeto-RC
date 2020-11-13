@@ -38,8 +38,8 @@ typedef struct request {
     char fname[32];
 } * Request;
 
-int numClients = 0;
-int numRequests = 0;
+int numClients = 1;
+int numRequests = 1;
 int verbose = FALSE;
 
 int fd_udp, fd_tcp;
@@ -131,7 +131,7 @@ char *request(int ind, char *uid, char *rid, char *fop, char *fname) {
     if (!strcmp(buffer, "RVC NOK\n"))
         return "RRQ EPD\n";
 
-    for (i = 0; i < numRequests + 1; i++) {
+    for (i = 0; i < numRequests; i++) {
         if (requests[i] == NULL) {
             requests[i] = (Request)malloc(sizeof(struct request));
             strcpy(requests[i]->rid, rid);
@@ -144,8 +144,8 @@ char *request(int ind, char *uid, char *rid, char *fop, char *fname) {
     }
     if (i == numRequests) {
         numRequests++;
-        requests = (Request *)realloc(requests, sizeof(Request) * (numRequests + 1));
-        requests[numRequests] = NULL;
+        requests = (Request *)realloc(requests, sizeof(Request) * (numRequests));
+        requests[numRequests-1] = NULL;
     }
 
     close(fd);
@@ -374,11 +374,11 @@ int main(int argc, char *argv[]) {
     strcpy(asport, ASPORT);
 
     for (i = MINARGS; i < argc; i++) {
-        if (!strcmp(argv[i], "-h") || i + 1 == argc) {
+        if (!strcmp(argv[i], "-v")) {
+            verbose = TRUE;
+        } else if (!strcmp(argv[i], "-h") || i + 1 == argc) {
             printf("​Usage: %s -p [ASport] [-v]\n", argv[0]);
             exit(0);
-        } else if (!strcmp(argv[i], "-v")) {
-            verbose = TRUE;
         } else if (!strcmp(argv[i], "-p")) {
             strcpy(asport, argv[++i]);
         }
@@ -433,7 +433,7 @@ int main(int argc, char *argv[]) {
             if (n == -1) printError("main: sendto()");
         }
         if (FD_ISSET(fd_tcp, &rset)) {
-            for (i = 0; i < numClients + 1; i++) {
+            for (i = 0; i < numClients; i++) {
                 if (users[i] == NULL) {
                     users[i] = (User)malloc(sizeof(struct user));
                     if ((users[i]->fd = accept(fd_tcp, (struct sockaddr *)&addr_tcp, &addrlen_tcp)) == -1) printError("main: accept()");
@@ -442,8 +442,8 @@ int main(int argc, char *argv[]) {
             }
             if (i == numClients) {
                 numClients++;
-                users = (User *)realloc(users, sizeof(User) * (numClients + 1));
-                users[numClients] = NULL;
+                users = (User *)realloc(users, sizeof(User) * (numClients));
+                users[numClients-1] = NULL;
             }
         }
         for (i = 0; i < numClients; i++) {
