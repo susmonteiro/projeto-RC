@@ -46,6 +46,7 @@ int numClients = 0;
 int numRequests = 0;
 int verbose = FALSE;
 int messageToResend = FALSE;
+int endAS;
 
 int fd_udp, fd_tcp;
 User *users;
@@ -62,6 +63,16 @@ char asport[8];
 void printv(char *message) {
     if (verbose)
         printf("%s\n", message);
+}
+
+/*      === sighandler functions ===       */
+
+void resendHandler() {
+    messageToResend = TRUE;
+}
+
+void exitHandler() {
+    endAS = TRUE;
 }
 
 /*      === resend messages that were not acknowledge ===       */
@@ -81,7 +92,7 @@ void resendMessage() {
     for (i = 0; i < numClients; i++) {
         if (users[i] == NULL)
             continue;
-        if (!users[i]->messageToBeCNF) {
+        if (!users[i]->confirmationPending) {
             printf("%s\n", users[i]->uid); //DEBUG
             continue;
         }
@@ -97,7 +108,7 @@ void resendMessage() {
             errorExit("sendto()");
         users[i]->numTries++;
     }
-    alarm(5);
+    alarm(2);
     return;
 }
 
@@ -491,52 +502,7 @@ char *applyCommand(char *message) {
 void fdManager() {
     char buffer[128];
     int i, n, maxfdp1;
-
-    if (argc < MINARGS || argc > MAXARGS) {
-        printf("​Usage: %s -p [ASport] [-v]\n", argv[0]);
-        printError("incorrect number of arguments");
-    }
-
-    strcpy(asport, ASPORT);
-
-    for (i = MINARGS; i < argc; i++) {
-        if (!strcmp(argv[i], "-h")) {
-            printf("​Usage: %s -p [ASport] [-v]\n", argv[0]);
-            exit(0);
-        } else if (!strcmp(argv[i], "-v")) {
-            verbose = TRUE;
-        } else if (!strcmp(argv[i], "-p")) {
-            if (i + 1 == argc) {
-                printf("​Usage: %s -p [ASport] [-v]\n", argv[0]);
-                printError("incorrect number of arguments");
-            }
-            strcpy(asport, argv[++i]);
-        }
-    }
-
-    srand(time(NULL));
-
-    mkdir("USERS", 0777);
-
-    tcpOpenConnection(asport, &fd_tcp, &res_tcp);
-    if (listen(fd_tcp, 5) == -1) printError("TCP: listen()");
-
-    users = (User *)malloc(sizeof(User));
-    users[0] = NULL;
-
-    requests = (Request *)malloc(sizeof(Request));
-    requests[0] = NULL;
-
-    udpOpenConnection(asport, &fd_udp, &res_udp);
-    connected = TRUE;
-    addrlen_udp = sizeof(addr_udp);
-
-    signal(SIGINT, exitAS);
-    //signal(SIGALRM, resendHandler);
-
     while (1) {
-        alarm(5);
-
         printf("inside select\n");
 
         FD_ZERO(&rset);
@@ -563,9 +529,12 @@ void fdManager() {
 
         maxfdp1++;
 
-        select(maxfdp1, &rset, NULL, NULL, NULL);
-        if (n == -1)
-            continue; // if interrupted by signals
+        n = select(maxfdp1, &rset, NULL, NULL, NULL);
+        if (n == -1) { // if interrupted by signals
+            if (endAS) exitAS();
+            if (messageToResend) resendMessage();
+            continue;
+        }
 
         if (FD_ISSET(fd_udp, &rset)) { // message from PD or FS
             n = recvfrom(fd_udp, buffer, 128, 0, (struct sockaddr *)&addr_udp, &addrlen_udp);
@@ -657,8 +626,9 @@ int main(int argc, char *argv[]) {
     connected = TRUE;
     addrlen_udp = sizeof(addr_udp);
 
-    signal(SIGINT, exitAS);
-    signal(SIGALRM, resendMessage);
+    signal(SIGINT, exitHandler);
+    signal(SIGALRM, resendHandler);
+    alarm(5);
 
     fdManager();
 
