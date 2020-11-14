@@ -329,23 +329,24 @@ char *secondAuth(char *uid, char *rid, char *vc) {
     return buffer;
 }
 
-void userSession(User userInfo) {
+void userSession(int ind) {
     int n;
     char buffer[128], msg[256], path[64], command[5], uid[32], rid[32], fop[32], vc[32], fname[32];
     printf("user session\n"); //DEBUG
 
-    n = read(userInfo->fd, buffer, 128);
+    n = read(users[ind]->fd, buffer, 128);
     if (n == -1) {
         printError("userSession: read()");
     } else if (n == 0) {
         printf("entrei\n");
-        close(userInfo->fd);
-        if (strlen(userInfo->uid) > 0) {
-            sprintf(path, "USERS/UID%s/UID%s_login.txt", userInfo->uid, userInfo->uid);
+        close(users[ind]->fd);
+        if (strlen(users[ind]->uid) > 0) {
+            sprintf(path, "USERS/UID%s/UID%s_login.txt", users[ind]->uid, users[ind]->uid);
             remove(path);
         }
 
-        userInfo = NULL;
+
+        users[ind] = NULL;
         return;
     }
 
@@ -356,17 +357,17 @@ void userSession(User userInfo) {
     sscanf(buffer, "%s", command);
     if (!strcmp(command, "LOG")) {
         sscanf(buffer, "%s %s %s", command, uid, rid);
-        strcpy(buffer, login(userInfo, uid, rid));
-        n = write(userInfo->fd, buffer, strlen(buffer));
+        strcpy(buffer, login(users[ind], uid, rid));
+        n = write(users[ind]->fd, buffer, strlen(buffer));
         if (n == -1)
             printError("userSession: write()");
     } else if (!strcmp(command, "REQ")) {
         sscanf(buffer, "%s %s %s %s %s", command, uid, rid, fop, fname);
-        request(userInfo, uid, rid, fop, fname);
+        request(users[ind], uid, rid, fop, fname);
     } else if (!strcmp(command, "AUT")) {
         sscanf(buffer, "%s %s %s %s", command, uid, rid, vc);
         strcpy(buffer, secondAuth(uid, rid, vc));
-        n = write(userInfo->fd, buffer, strlen(buffer));
+        n = write(users[ind]->fd, buffer, strlen(buffer));
         if (n == -1)
             printError("userSession: write()");
     }
@@ -432,21 +433,21 @@ char *validateOperation(char *uid, char *tid) {
 
     reply = (char *)malloc(128 * sizeof(char));
 
-    for (i = 0; i < numRequests; i++) {
+    for (i = 0; i < numRequests + 1; i++) {
         if (requests[i] != NULL && !strcmp(tid, requests[i]->tid))
             break;
     }
-    if (i == numRequests) {
+    if (i == numRequests + 1) {
         sprintf(error, "Error: Request was not found for TID=%s", tid);
         printv(error);
         fop = 'E';
     }
-    for (j = 0; j < numClients; j++) {
+    for (j = 0; j < numClients + 1; j++) {
         if (!strcmp(users[j]->uid, uid)) {
             break;
         }
     }
-    if (j == numClients) {
+    if (j == numClients + 1) {
         sprintf(error, "Error: Request was not found for UID=%s", uid);
         printv(error);
         for (j = 0; j < numClients; j++) {
@@ -508,10 +509,8 @@ char *applyCommand(char *message) {
 
 void fdManager() {
     char buffer[128];
-    int i, n, maxfdp1;
+    int i, n, maxfdp1, fd;
     while (1) {
-        printf("inside select\n");
-
         FD_ZERO(&rset);
         FD_SET(fd_udp, &rset);
         // FD_SET(fd_udp_client, &rset);
@@ -540,7 +539,7 @@ void fdManager() {
         if (n == -1) { // if interrupted by signals
             if (endAS) exitAS();
             if (messageToResend) resendMessage();
-            //printf("here?\n"); //DEBUG
+            printf("here?\n"); //DEBUG
             continue;
         }
 
@@ -559,12 +558,15 @@ void fdManager() {
         printf("xixicoco\n"); // DEBUG
         if (FD_ISSET(fd_tcp, &rset)) { // receive user connections
             printf("received tcp connection\n"); // DEBUG
+            fd = accept(fd_tcp, (struct sockaddr *)&addr_tcp, &addrlen_tcp);
             for (i = 0; i < numClients + 1; i++) {
                 if (users[i] == NULL) {
                     users[i] = (User)malloc(sizeof(struct user));
                     users[i]->confirmationPending = FALSE;
-                    if ((users[i]->fd = accept(fd_tcp, (struct sockaddr *)&addr_tcp, &addrlen_tcp)) == -1) printError("main: accept()");
+                    users[i]->fd = fd;
                     break;
+                    //if ((users[i]->fd = accept(fd_tcp, (struct sockaddr *)&addr_tcp, &addrlen_tcp)) == -1) printError("main: accept()");
+                    //break;
                 }
             }
             if (i == numClients) {
@@ -580,12 +582,12 @@ void fdManager() {
                 if (FD_ISSET(users[i]->fd, &rset)) {        // message from user
                     printf("received message from user\n"); //DEBUG
                     if (!users[i]->confirmationPending) {   // does not read message if cannot communicate with PD
-                        userSession(users[i]);
+                        userSession(i);
                     } else {
                         printf("user trying to login\n"); //DEBUG
                     }
                 }
-                if (FD_ISSET(users[i]->pd_fd, &rset)) {   // message from PD
+                if (users[i] != NULL && FD_ISSET(users[i]->pd_fd, &rset)) {   // message from PD
                     printf("received message from PD\n"); // DEBUG
                     requestReply(users[i]);
                 }
