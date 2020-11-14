@@ -102,8 +102,10 @@ void resendMessage() {
 
 void freePD() {
     printf("Exiting...\n");
-    freeaddrinfo(res_udp_client);
+    close(fd_udp);
+    freeaddrinfo(res_udp);
     close(fd_udp_client);
+    freeaddrinfo(res_udp_client);
     exit(0);
 }
 
@@ -158,10 +160,10 @@ void unregistration() {
     alarm(2);
 }
 
-char *validateRequest(char *message) {
-    char command[5], uid[32], vc[32], fname[32], type[32];
-    char *result;
+void validateRequest(char *message) {
+    char command[5], uid[32], vc[32], fname[32], type[32], result[64];
     char op;
+    int n;
 
     sscanf(message, "%s %s %s %c", command, uid, vc, &op);
     if (!strcmp(command, "VLC") && strlen(vc) == 4) {
@@ -189,12 +191,12 @@ char *validateRequest(char *message) {
             sscanf(message, "%s %s %s %c", command, uid, vc, &op);
             printf("Operation: %s\nVC = %s\n", type, vc);
         }
-        result = (char *)malloc(32 * sizeof(char));
         sprintf(result, "RVC %s OK\n", uid);
-        return result;
     } else {
-        return "ERR\n";
+        strcpy(result, "ERR\n");
     }
+    n = sendto(fd_udp, result, strlen(result) * sizeof(char), 0, (struct sockaddr *)&addr_udp, addrlen_udp);
+    if (n == -1) errorExit("sendto()");
 }
 
 /*      === main code ===        */
@@ -235,9 +237,7 @@ void fdManager() {
             n = recvfrom(fd_udp, buffer, 32, 0, (struct sockaddr *)&addr_udp, &addrlen_udp);
             if (n == -1) errorExit("recvfrom()");
             buffer[n] = '\0';
-
-            n = sendto(fd_udp, validateRequest(buffer), 32, 0, (struct sockaddr *)&addr_udp, addrlen_udp);
-            if (n == -1) errorExit("sendto()");
+            validateRequest(buffer);
         }
 
         if (FD_ISSET(fd_udp_client, &rset)) {

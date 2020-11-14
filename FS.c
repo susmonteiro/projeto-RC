@@ -77,8 +77,14 @@ void exitFS() {
     close(fd_udp);
     freeaddrinfo(res_tcp);
     close(fd_tcp);
-    for (i = 0; i < numClients; i++)
-        close(users[i]->fd);
+    for (i = 0; i < numClients; i++) {
+        if (users[i] != NULL)
+            close(users[i]->fd);
+        free(users[i]);
+    }
+    for (i = 0; i < numTransactions; i++) {
+        free(transactions[i]);
+    }
     printv("Ending FS...");
     exit(0);
 }
@@ -327,6 +333,7 @@ void removeAll(int fd, Transaction transaction) {
         }
         closedir(d);
     }
+    rmdir(dirpath);
 
     sprintf(message, "operation remove done for UID=%s", transaction->uid);
     printv(message);

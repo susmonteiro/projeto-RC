@@ -97,9 +97,11 @@ void resendMessage() {
             continue;
         }
         if (users[i]->numTries++ > 1) {
-            n = write(users[i]->fd, "RRQ EPD\n", 6);
+            //printf("goodbye pd\n"); //DEBUG
+            n = write(users[i]->fd, "RRQ EPD\n", 8);
             if (n == -1)
                 printError("resendMessage: write()");
+            resetLastMessage(users[i]);
             continue;
         }
         //printf("sending message again\n"); //DEBUG
@@ -302,7 +304,7 @@ char *secondAuth(char *uid, char *rid, char *vc) {
     printf("numRequests: %d\n", numRequests); // DEBUG
 
     for (i = 0; i < numRequests + 1; i++) {
-        if (!strcmp(requests[i]->rid, rid)) {
+        if (!strcmp(requests[i]->rid, rid)) { // TODO fix seg fault
             break;
         }
     }
@@ -473,6 +475,7 @@ char *validateOperation(char *uid, char *tid) {
             }
             closedir(d);
         }
+        rmdir(dirpath);
     }
 
     if (fop == 'R' || fop == 'U' || fop == 'D') {
@@ -539,7 +542,6 @@ void fdManager() {
         if (n == -1) { // if interrupted by signals
             if (endAS) exitAS();
             if (messageToResend) resendMessage();
-            printf("here?\n"); //DEBUG
             continue;
         }
 
@@ -555,18 +557,16 @@ void fdManager() {
                 printError("main: sendto()");
         }
 
-        printf("xixicoco\n"); // DEBUG
         if (FD_ISSET(fd_tcp, &rset)) { // receive user connections
             printf("received tcp connection\n"); // DEBUG
             fd = accept(fd_tcp, (struct sockaddr *)&addr_tcp, &addrlen_tcp);
+            if (fd == -1) printError("main: accept()");
             for (i = 0; i < numClients + 1; i++) {
                 if (users[i] == NULL) {
                     users[i] = (User)malloc(sizeof(struct user));
                     users[i]->confirmationPending = FALSE;
                     users[i]->fd = fd;
                     break;
-                    //if ((users[i]->fd = accept(fd_tcp, (struct sockaddr *)&addr_tcp, &addrlen_tcp)) == -1) printError("main: accept()");
-                    //break;
                 }
             }
             if (i == numClients) {
