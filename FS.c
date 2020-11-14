@@ -319,7 +319,6 @@ void uploadFile(int user, Transaction transaction) {
     }
 
     if (n_files >= 15) {
-        readGarbage(users[user]->fd, size);
         n = write(users[user]->fd, "RUP FULL\n", 9);
         if (n == -1) errorExit("write()");
         return;
