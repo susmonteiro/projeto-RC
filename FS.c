@@ -472,7 +472,7 @@ void doOperation(char *buffer) {
             }
         }
 
-        if (j == numClients) {
+        if (j == numClients + 1) {
             printv("Error: User does not exist");
             for (j = 0; j < numClients + 1; j++) {
                 if (!strcmp(users[j]->uid, transactions[i]->uid)) {
