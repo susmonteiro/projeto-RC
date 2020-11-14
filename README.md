@@ -319,7 +319,6 @@ Request and reply messages:
 - verificar mais do que um user em simultaneo
 - correr no sigma cenas em máquinas diferentes
 - comentarios de acordo com o user e o pd
-- segfaults do AS e verificar que os servidores nunca morrem por culpa dos clientes
 - confirmar mensagens com o enunciado
 
 
