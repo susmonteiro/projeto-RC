@@ -274,15 +274,6 @@ Request and reply messages:
 ---
 ---
 ## CHECKLIST
-- implement verbose as
-- SIGPIPE (não deixar que o servidor morra quando tenta fazer um write() e não consegue falar com o cliente)
-- SIGALARM para quando a resposta demora demasiado tempo a chegar)
-- SIGINT para quando se carrega no ctrl+c o programa terminar ordeiramente
-- fix sendto sending too many chars
-- close connections on exit
-- reads dentro de um ciclo para garantir que tudo foi lido (e os writes?) --> verificar que foram lidos menos do que o número de bytes possivel de ler no read. Se não, ver se terminou num '\n' e se não significa que há mais por ler
-- quando há uma falha num comando, deve-se terminar ordeiramente
-- no read, n=0 significa que a sessão fechou
 
 ---
 ---
@@ -316,16 +307,24 @@ Request and reply messages:
 - imaginando que o user recebe um file do FS. É suposto confirmarmos no User que esse pedido foi feito?
 > sim, e terminar se não tiver feito
 
+#### Last Day:
+- prints do verbose do AS e FS
+- apagar DEBUG messages em todo o lado
+- FS e AS é suposto não mandarem NADA a não ser que estejam a correr em verbose
+- verificar que sempre que os programas morrem eles chama a função exit respetiva (e não exit(0) normal) -> ficheiro error.c e' preciso?
+- correr os scripts 
+- preencher excel
+- prettify everything :)
+- correr valgrind, ver se não há leaks
+- verificar mais do que um user em simultaneo
+- correr no sigma cenas em máquinas diferentes
+- comentarios de acordo com o user e o pd
+- segfaults do AS e verificar que os servidores nunca morrem por culpa dos clientes
+- confirmar mensagens com o enunciado
+
 
 ---
 ---
-
-## Checklist:
-- login de um user 2x fica em loop no AS?
-- resend messages in AS and in FS
-- ver frees pd
-- user: select should ignore signals 
-
 ## TODO:
 - verificar que os ficheiros estao sempre a terminar como deve de ser e que os servidores nunca morrem quando recebem algo inválido [**Susana**]
 - resend de mensagens no AS (e no FS) [**Susana**]
