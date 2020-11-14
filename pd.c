@@ -198,7 +198,7 @@ void validateRequest(char *message) {
 
 void fdManager() {
     int n;
-    char reply[9], buffer[32], command[6], tmpUid[7], tmpPass[10];
+    char reply[32], buffer[32], command[6], tmpUid[7], tmpPass[10];
 
     while (1) {
         FD_ZERO(&rset);
