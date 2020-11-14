@@ -85,26 +85,3 @@ void tcpConnect(char *ip, char *port, int *fd, struct addrinfo **res) {
     n = connect(*fd, (*res)->ai_addr, (*res)->ai_addrlen);
     if (n == -1) errorExit("tcpConnect: connect()");
 }
-
-/* void udpSend(int fd, struct addrinfo *res) {
-    int n;
-
-    n = sendto(fd, "Hello!\n", 7, 0, res->ai_addr, res->ai_addrlen);
-    if (n == -1) exit(1);
-}
-
-void udpReceive(int fd) {
-    char buffer[128];
-    struct sockaddr_in addr;
-    socklen_t addrlen;
-    int n;
-
-    addrlen = sizeof(addr);
-    n = recvfrom(fd, buffer, 128, 0, (struct sockaddr*) &addr, &addrlen);
-    if (n == -1) exit(1);
-} */
-
-void closeConnection(int fd, struct addrinfo *res) {
-    freeaddrinfo(res);
-    close(fd);
-}
