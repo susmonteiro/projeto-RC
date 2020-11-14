@@ -312,7 +312,6 @@ Request and reply messages:
 - user invalid command sometimes (val)
 - signal inside funções bloqueantes?
 - AS and FS should die on invalid message
-- verificar que sempre que os programas morrem eles chama a função exit respetiva (e não exit(0) normal) -> ficheiro error.c e' preciso?
 - correr os scripts 
 - preencher excel
 - prettify everything :)
