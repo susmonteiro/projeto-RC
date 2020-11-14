@@ -369,7 +369,7 @@ void userSession(int ind) {
     }
     if (i == numTransactions) {
         numTransactions++;
-        transactions = (Transaction *)realloc(transactions, sizeof(Transaction) * (numTransactions));
+        transactions = (Transaction *)realloc(transactions, sizeof(Transaction) * (numTransactions + 1));
         transactions[numTransactions] = NULL;
     }
 
