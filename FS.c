@@ -313,7 +313,7 @@ void uploadFile(int ind, Transaction transaction) {
 
     sprintf(message, "%s stored for UID=%s", transaction->fname, transaction->uid);
     printv(message);
-    n = write(users[ind]->fd, "RUP OK\n", 8);
+    n = write(users[ind]->fd, "RUP OK\n", 7);
     if (n == -1) errorExit("write()");
 }
 
