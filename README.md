@@ -311,6 +311,7 @@ Request and reply messages:
 - prints do verbose do AS e FS
 - user invalid command sometimes (val)
 - AS seg fault (req U lists.c -> wrong val -> good val -> req U lists.c -> val)
+- AS seg fault (User 1: login -> req L; User 2: `^C`)
 - user print new file destination?
 - AS and FS should die on invalid message
 - verificar que sempre que os programas morrem eles chama a função exit respetiva (e não exit(0) normal) -> ficheiro error.c e' preciso?
