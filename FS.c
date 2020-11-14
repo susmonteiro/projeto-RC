@@ -247,7 +247,7 @@ void retrieveFile(int fd, Transaction transaction) {
     sprintf(message, "file %s retrieved for user %s", transaction->fname, transaction->uid);
     printv(message);
 
-    sprintf(message, "RRT OK %d ", fsize);
+    sprintf(message, "RRT OK %d ", fsize+1);
     n = write(fd, message, strlen(message));
     if (n == -1) errorExit("write()");
 
