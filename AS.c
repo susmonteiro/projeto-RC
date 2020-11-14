@@ -86,25 +86,21 @@ void resetLastMessage(User user) {
 void resendMessage() {
     int n, i;
 
-    //printf("inside resend message\n"); //DEBUG
     messageToResend = FALSE;
 
     for (i = 0; i < numClients; i++) {
         if (users[i] == NULL)
             continue;
         if (!users[i]->confirmationPending) {
-            //printf("%s\n", users[i]->uid); //DEBUG
             continue;
         }
         if (users[i]->numTries++ > 1) {
-            //printf("goodbye pd\n"); //DEBUG
             n = write(users[i]->fd, "RRQ EPD\n", 8);
             if (n == -1)
                 printError("resendMessage: write()");
             resetLastMessage(users[i]);
             continue;
         }
-        //printf("sending message again\n"); //DEBUG
         n = sendto(users[i]->pd_fd, users[i]->lastMessage, strlen(users[i]->lastMessage) * sizeof(char), 0, users[i]->pd_res->ai_addr, users[i]->pd_res->ai_addrlen);
         if (n == -1)
             errorExit("sendto()");
@@ -207,7 +203,6 @@ void request(User userInfo, char *uid, char *rid, char *fop, char *fname) {
     printf("%s %s\n", pdip, pdport);
 
     udpConnect(pdip, pdport, &userInfo->pd_fd, &userInfo->pd_res);
-    printf("%d\n", userInfo->pd_fd); // DEBUG
 
     sprintf(vc, "%04d", rand() % 10000);
 
@@ -273,7 +268,6 @@ void requestReply(User userInfo) {
     }
 
     if (!allGoodMyDude) {
-        printf("deleting request\n"); //DEBUG
         for (i = 0; i < numRequests + 1; i++) {
             if (!strcmp(requests[i]->uid, userInfo->uid)) {
                 requests[i] = NULL;
@@ -284,13 +278,11 @@ void requestReply(User userInfo) {
 
     resetLastMessage(userInfo);
     printf("can i send messages momma? plsplspls %d\n", userInfo->confirmationPending);
-    puts(buffer); //DEBUG
 
     close(userInfo->pd_fd);
     freeaddrinfo(userInfo->pd_res);
     n = write(userInfo->fd, buffer, strlen(buffer));
     if (n == -1) printError("userSession: write()");
-    printf("i sent %d to user\n", n); //DEBUG
     return;
 }
 
@@ -301,7 +293,6 @@ char *secondAuth(char *uid, char *rid, char *vc) {
 
     buffer = (char *)malloc(sizeof(char) * 32);
 
-    printf("numRequests: %d\n", numRequests); // DEBUG
 
     for (i = 0; i < numRequests + 1; i++) {
         if (!strcmp(requests[i]->rid, rid)) { // TODO fix seg fault
@@ -310,7 +301,6 @@ char *secondAuth(char *uid, char *rid, char *vc) {
     }
     //wtf
     if (i == numRequests + 1 || strcmp(requests[i]->vc, vc)) {
-        printf("no request made\n"); //DEBUG
         return "RAU 0\n";
     }
 
@@ -334,7 +324,6 @@ char *secondAuth(char *uid, char *rid, char *vc) {
 void userSession(int ind) {
     int n;
     char buffer[128], msg[256], path[64], command[5], uid[32], rid[32], fop[32], vc[32], fname[32];
-    printf("user session\n"); //DEBUG
 
     n = read(users[ind]->fd, buffer, 128);
     if (n == -1) {
@@ -546,7 +535,6 @@ void fdManager() {
         }
 
         if (FD_ISSET(fd_udp, &rset)) {         // message from PD or FS
-            printf("message from pd or fs\n"); // DEBUG
             n = recvfrom(fd_udp, buffer, 128, 0, (struct sockaddr *)&addr_udp, &addrlen_udp);
             if (n == -1)
                 printError("main: recvfrom()");
@@ -558,7 +546,6 @@ void fdManager() {
         }
 
         if (FD_ISSET(fd_tcp, &rset)) { // receive user connections
-            printf("received tcp connection\n"); // DEBUG
             fd = accept(fd_tcp, (struct sockaddr *)&addr_tcp, &addrlen_tcp);
             if (fd == -1) printError("main: accept()");
             for (i = 0; i < numClients + 1; i++) {
@@ -576,19 +563,15 @@ void fdManager() {
             }
         }
         for (i = 0; i < numClients; i++) {
-            printf("message from user\n"); // DEBUG
 
             if (users[i] != NULL) {
                 if (FD_ISSET(users[i]->fd, &rset)) {        // message from user
-                    printf("received message from user\n"); //DEBUG
                     if (!users[i]->confirmationPending) {   // does not read message if cannot communicate with PD
                         userSession(i);
                     } else {
-                        printf("user trying to login\n"); //DEBUG
                     }
                 }
                 if (users[i] != NULL && FD_ISSET(users[i]->pd_fd, &rset)) {   // message from PD
-                    printf("received message from PD\n"); // DEBUG
                     requestReply(users[i]);
                 }
             }

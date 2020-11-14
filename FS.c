@@ -272,8 +272,6 @@ void uploadFile(int ind, Transaction transaction) {
     char dirpath[32], filepath[64], c;
     int n, i, size, n_files = 0;
 
-    printf("inside uploadFile\n"); // DEBUG
-
     sscanf(transaction->fsize, "%d", &size);
 
     sprintf(dirpath, "USERS/UID%s/FILES", transaction->uid);
@@ -554,7 +552,6 @@ void fdManager() {
         }
 
         if (FD_ISSET(fd_udp, &rset)) {            // receive message from AS
-            printf("received message from AS\n"); //DEBUG
             n = recvfrom(fd_udp, buffer, 128, 0, (struct sockaddr *)&addr_udp, &addrlen_udp);
             if (n == -1) printError("main: recvfrom()");
             buffer[n] = '\0';
