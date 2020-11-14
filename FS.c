@@ -145,7 +145,6 @@ void resendMessage() {
 
 int readUntilSpace(int ind, char *buffer) { // TODO function common to other files?
     char c;
-    //char path[64];
     int i = 0, n = 0, count = 0;
     do {
         n = read(users[ind]->fd, &c, 1);
@@ -157,6 +156,7 @@ int readUntilSpace(int ind, char *buffer) { // TODO function common to other fil
             return count;
         }
         buffer[i++] = c;
+        if (endFS) exitFS();
     } while (c != ' ' && c != '\0' && c != '\n');
     buffer[--i] = '\0';
 

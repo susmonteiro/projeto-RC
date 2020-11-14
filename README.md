@@ -308,9 +308,9 @@ Request and reply messages:
 > sim, e terminar se não tiver feito
 
 #### Last Day:
+- remove commented code
 - prints do verbose do AS têm um \n a mais para mensagens recebidas
 - user invalid command sometimes (val)
-- signal inside funções bloqueantes?
 - AS and FS should die on invalid message
 - correr os scripts 
 - preencher excel
