@@ -313,7 +313,7 @@ void uploadFile(int ind, Transaction transaction) {
 
     sprintf(message, "%s stored for UID=%s", transaction->fname, transaction->uid);
     printv(message);
-    n = write(users[ind]->fd, "RUP OK\n", 8);
+    n = write(users[ind]->fd, "RUP OK\n", 7);
     if (n == -1) errorExit("write()");
 }
 
@@ -472,7 +472,7 @@ void doOperation(char *buffer) {
             }
         }
 
-        if (j == numClients) {
+        if (j == numClients + 1) {
             printv("Error: User does not exist");
             for (j = 0; j < numClients + 1; j++) {
                 if (!strcmp(users[j]->uid, transactions[i]->uid)) {
