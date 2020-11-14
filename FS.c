@@ -42,7 +42,7 @@ int verbose = FALSE;
 
 int numTries = 0;
 char lastMessage[128];
-int messageToBeCNF = FALSE;
+int confirmationPending = FALSE;
 int messageToResend = FALSE;
 int endFS = FALSE;
 
@@ -102,10 +102,17 @@ void exitHandler() {
 /*      === resend messages that were not acknowledge ===       */
 
 void resetLastMessage() {
-    messageToBeCNF = FALSE;
+    confirmationPending = FALSE;
     lastMessage[0] = '\0';
     numTries = 0;
     alarm(0);
+}
+
+void assignLastMessage(char *message) {
+    confirmationPending = TRUE;
+    strcpy(lastMessage, message);
+    alarm(2);
+
 }
 
 void resendMessage() {
@@ -414,8 +421,8 @@ void userSession(int ind) {
     sprintf(message, "VLD %s %s\n", uid, tid);
     n = sendto(fd_udp, message, strlen(message), 0, res_udp->ai_addr, res_udp->ai_addrlen);
     if (n == -1) printError("validateOperation: sendto()");
+    assignLastMessage(message);
 
-    messageToBeCNF = TRUE;
     users[ind]->pending = TRUE;
 }
 
@@ -572,7 +579,7 @@ void fdManager() {
                 users[numClients] = NULL;
             }
         }
-        if (!messageToBeCNF) {
+        if (!confirmationPending) { // receive message from User only if FS can communicate with AS
             for (i = 0; i < numClients; i++) { // receive command from User
                 if (users[i] != NULL && !users[i]->pending) {
                     if (FD_ISSET(users[i]->fd, &rset)) {
