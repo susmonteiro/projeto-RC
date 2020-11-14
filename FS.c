@@ -143,16 +143,16 @@ void resendMessage() {
 
 /*      === auxiliary functions ===       */
 
-int readUntilSpace(int ind, char *buffer) {
+int readUntilSpace(int user, char *buffer) {
     char c;
     int i = 0, n = 0, count = 0;
     do {
-        n = read(users[ind]->fd, &c, 1);
+        n = read(users[user]->fd, &c, 1);
         count += n;
         if (n <= 0) {
-            close(users[ind]->fd);
+            close(users[user]->fd);
 
-            users[ind] = NULL;
+            users[user] = NULL;
             return count;
         }
         buffer[i++] = c;
@@ -280,7 +280,7 @@ void retrieveFile(int fd, Transaction transaction) {
     fclose(file);
 }
 
-void uploadFile(int ind, Transaction transaction) {
+void uploadFile(int user, Transaction transaction) {
     DIR *d;
     FILE *file;
     struct dirent *dir;
@@ -298,8 +298,8 @@ void uploadFile(int ind, Transaction transaction) {
     if (d) {
         while ((dir = readdir(d)) != NULL) {
             if (!strcmp(dir->d_name, transaction->fname)) {
-                readGarbage(users[ind]->fd, size);
-                n = write(users[ind]->fd, "RUP DUP\n", 8);
+                readGarbage(users[user]->fd, size);
+                n = write(users[user]->fd, "RUP DUP\n", 8);
                 if (n == -1) errorExit("write()");
                 return;
             }
@@ -310,8 +310,8 @@ void uploadFile(int ind, Transaction transaction) {
     }
 
     if (n_files >= 15) {
-        readGarbage(users[ind]->fd, size);
-        n = write(users[ind]->fd, "RUP FULL\n", 9);
+        readGarbage(users[user]->fd, size);
+        n = write(users[user]->fd, "RUP FULL\n", 9);
         if (n == -1) errorExit("write()");
         return;
     }
@@ -320,13 +320,13 @@ void uploadFile(int ind, Transaction transaction) {
     file = fopen(filepath, "w");
 
     for (i = 0; i < size; i++) {
-        n = read(users[ind]->fd, &c, 1);
+        n = read(users[user]->fd, &c, 1);
         if (n == -1)
             errorExit("read()");
         else if (n == 0) {
             printf("Error: FS closed\n");
-            close(users[ind]->fd);
-            users[ind] = NULL;
+            close(users[user]->fd);
+            users[user] = NULL;
             return;
         }
         if (file != NULL)
@@ -334,11 +334,11 @@ void uploadFile(int ind, Transaction transaction) {
     }
     if (file != NULL) fclose(file);
 
-    readGarbage(users[ind]->fd, size);
+    readGarbage(users[user]->fd, size);
 
     sprintf(message, "%s stored for UID=%s", transaction->fname, transaction->uid);
     printv(message);
-    n = write(users[ind]->fd, "RUP OK\n", 7);
+    n = write(users[user]->fd, "RUP OK\n", 7);
     if (n == -1) errorExit("write()");
 }
 
@@ -371,18 +371,18 @@ void removeAll(int fd, Transaction transaction) {
 /*      === user manager ===        */
 
 // receive new connection from user
-void userSession(int ind) {
+void userSession(int user) {
     int n, i;
     char buffer[128], message[128], command[5], uid[32], tid[32], fname[32], fsize[32], type[32];
 
-    if (!readUntilSpace(ind, command)) return;
+    if (!readUntilSpace(user, command)) return;
 
-    if (users[ind] == NULL) return;
+    if (users[user] == NULL) return;
 
-    if (!readUntilSpace(ind, uid)) return;
-    if (!readUntilSpace(ind, tid)) return;
+    if (!readUntilSpace(user, uid)) return;
+    if (!readUntilSpace(user, tid)) return;
 
-    strcpy(users[ind]->uid, uid);
+    strcpy(users[user]->uid, uid);
 
     for (i = 0; i < numTransactions + 1; i++) {
         if (transactions[i] == NULL) {
@@ -407,14 +407,14 @@ void userSession(int ind) {
             strcpy(type, "delete");
             strcpy(transactions[i]->fop, "D");
         }
-        if (!readUntilSpace(ind, fname)) return;
+        if (!readUntilSpace(user, fname)) return;
         sprintf(buffer, "UID=%s: %s %s", uid, type, fname);
 
         strcpy(transactions[i]->fname, fname);
 
     } else if (!strcmp(command, "UPL")) {
-        if (!readUntilSpace(ind, fname)) return;
-        if (!readUntilSpace(ind, fsize)) return;
+        if (!readUntilSpace(user, fname)) return;
+        if (!readUntilSpace(user, fsize)) return;
         sprintf(buffer, "UID=%s: upload %s (%s Bytes)", uid, fname, fsize);
         strcpy(transactions[i]->fop, "U");
         strcpy(transactions[i]->fname, fname);
@@ -436,7 +436,7 @@ void userSession(int ind) {
     if (n == -1) printError("validateOperation: sendto()");
     assignLastMessage(message);
 
-    users[ind]->pending = TRUE;
+    users[user]->pending = TRUE;
 }
 
 void sendInvReply(int fd, Transaction transaction) {

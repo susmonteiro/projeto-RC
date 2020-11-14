@@ -327,21 +327,21 @@ char *secondAuth(char *uid, char *rid, char *vc) {
     return buffer;
 }
 
-void userSession(int ind) {
+void userSession(int user) {
     int n;
     char buffer[128], path[128], command[5], uid[32], rid[32], fop[32], vc[32], fname[32];
 
-    n = read(users[ind]->fd, buffer, 128);
+    n = read(users[user]->fd, buffer, 128);
     if (n == -1) {
         printError("userSession: read()");
     } else if (n == 0) {
-        close(users[ind]->fd);
-        if (strlen(users[ind]->uid) > 0) {
-            sprintf(path, "USERS/UID%s/UID%s_login.txt", users[ind]->uid, users[ind]->uid);
+        close(users[user]->fd);
+        if (strlen(users[user]->uid) > 0) {
+            sprintf(path, "USERS/UID%s/UID%s_login.txt", users[user]->uid, users[user]->uid);
             remove(path);
         }
 
-        users[ind] = NULL;
+        users[user] = NULL;
         return;
     }
     buffer[n] = '\0';
@@ -349,17 +349,17 @@ void userSession(int ind) {
     sscanf(buffer, "%s", command);
     if (!strcmp(command, "LOG")) {
         sscanf(buffer, "%s %s %s", command, uid, rid);
-        strcpy(buffer, login(users[ind], uid, rid));
-        n = write(users[ind]->fd, buffer, strlen(buffer));
+        strcpy(buffer, login(users[user], uid, rid));
+        n = write(users[user]->fd, buffer, strlen(buffer));
         if (n == -1)
             printError("userSession: write()");
     } else if (!strcmp(command, "REQ")) {
         sscanf(buffer, "%s %s %s %s %s", command, uid, rid, fop, fname);
-        request(users[ind], uid, rid, fop, fname);
+        request(users[user], uid, rid, fop, fname);
     } else if (!strcmp(command, "AUT")) {
         sscanf(buffer, "%s %s %s %s", command, uid, rid, vc);
         strcpy(buffer, secondAuth(uid, rid, vc));
-        n = write(users[ind]->fd, buffer, strlen(buffer));
+        n = write(users[user]->fd, buffer, strlen(buffer));
         if (n == -1)
             printError("userSession: write()");
     }

@@ -308,12 +308,10 @@ Request and reply messages:
 > sim, e terminar se não tiver feito
 
 #### Last Day:
-- remove commented code
 - user invalid command sometimes (val)
 - AS and FS should die on invalid message
 - correr os scripts 
 - preencher excel
-- prettify everything :)
 - correr valgrind, ver se não há leaks
 - verificar mais do que um user em simultaneo
 - correr no sigma cenas em máquinas diferentes
