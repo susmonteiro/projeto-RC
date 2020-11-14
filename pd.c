@@ -8,11 +8,6 @@ Then it waits for validation codes (VC) sent by the AS, which should be displaye
 The PD application can also receive a command to exit, unregistering the user.
 */
 
-/* ===      TODO in PD      === 
-    - do we need all of these includes?
-    - check if there are functions common to other files (#define MAX for example)
-*/
-
 #include "config.h"
 #include "connection.h"
 #include <arpa/inet.h>
