@@ -309,7 +309,6 @@ Request and reply messages:
 
 #### Last Day:
 - remove commented code
-- prints do verbose do AS têm um \n a mais para mensagens recebidas
 - user invalid command sometimes (val)
 - AS and FS should die on invalid message
 - correr os scripts 
