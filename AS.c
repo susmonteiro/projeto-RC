@@ -223,9 +223,9 @@ void request(User userInfo, char *uid, char *rid, char *fop, char *fname) {
             break;
         }
     }
-    if (i == numRequests + 1) {
+    if (i == numRequests) {
         numRequests++;
-        requests = (Request *)realloc(requests, sizeof(Request) * (numRequests));
+        requests = (Request *)realloc(requests, sizeof(Request) * (numRequests + 1));
         requests[numRequests] = NULL;
     }
 
@@ -284,13 +284,12 @@ char *secondAuth(char *uid, char *rid, char *vc) {
 
     buffer = (char *)malloc(sizeof(char) * 32);
 
-
     for (i = 0; i < numRequests + 1; i++) {
-        if (!strcmp(requests[i]->rid, rid)) { // TODO fix seg fault
+        if (requests[i] != NULL && !strcmp(requests[i]->rid, rid)) {
             break;
         }
     }
-    //wtf
+
     if (i == numRequests + 1 || strcmp(requests[i]->vc, vc)) {
         return "RAU 0\n";
     }
@@ -325,7 +324,6 @@ void userSession(int ind) {
             sprintf(path, "USERS/UID%s/UID%s_login.txt", users[ind]->uid, users[ind]->uid);
             remove(path);
         }
-
 
         users[ind] = NULL;
         return;
@@ -520,7 +518,7 @@ void fdManager() {
             continue;
         }
 
-        if (FD_ISSET(fd_udp, &rset)) {         // message from PD or FS
+        if (FD_ISSET(fd_udp, &rset)) { // message from PD or FS
             n = recvfrom(fd_udp, buffer, 128, 0, (struct sockaddr *)&addr_udp, &addrlen_udp);
             if (n == -1)
                 printError("main: recvfrom()");
@@ -551,13 +549,13 @@ void fdManager() {
         for (i = 0; i < numClients; i++) {
 
             if (users[i] != NULL) {
-                if (FD_ISSET(users[i]->fd, &rset)) {        // message from user
-                    if (!users[i]->confirmationPending) {   // does not read message if cannot communicate with PD
+                if (FD_ISSET(users[i]->fd, &rset)) {      // message from user
+                    if (!users[i]->confirmationPending) { // does not read message if cannot communicate with PD
                         userSession(i);
                     } else {
                     }
                 }
-                if (users[i] != NULL && FD_ISSET(users[i]->pd_fd, &rset)) {   // message from PD
+                if (users[i] != NULL && FD_ISSET(users[i]->pd_fd, &rset)) { // message from PD
                     requestReply(users[i]);
                 }
             }

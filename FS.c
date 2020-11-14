@@ -369,11 +369,11 @@ void userSession(int ind) {
     }
     if (i == numTransactions) {
         numTransactions++;
-        transactions = (Transaction *)realloc(transactions, sizeof(Transaction) * (numTransactions));
+        transactions = (Transaction *)realloc(transactions, sizeof(Transaction) * (numTransactions + 1));
         transactions[numTransactions] = NULL;
     }
 
-    sprintf(message, "received from User: %s %s %s %s", command, uid, tid, transactions[i]->fop);
+    sprintf(message, "message from User: %s %s %s %s", command, uid, tid, transactions[i]->fop);
     printv(message);
 
     if (!strcmp(command, "RTV") || !strcmp(command, "DEL")) {
@@ -386,7 +386,6 @@ void userSession(int ind) {
             strcpy(transactions[i]->fop, "D");
         }
         if (!readUntilSpace(ind, fname)) return;
-        //sscanf(buffer, "%s %s %s %s", command, uid, tid, fname);
         sprintf(buffer, "UID=%s: %s %s", uid, type, fname);
 
         strcpy(transactions[i]->fname, fname);
@@ -408,6 +407,7 @@ void userSession(int ind) {
         }
         sprintf(buffer, "UID=%s: %s", uid, type);
     }
+    printv(buffer);
 
     sprintf(message, "VLD %s %s\n", uid, tid);
     n = sendto(fd_udp, message, strlen(message), 0, res_udp->ai_addr, res_udp->ai_addrlen);
@@ -448,7 +448,7 @@ void doOperation(char *buffer) {
     char fop;
 
     sscanf(buffer, "%s %s %s %c", command, uid, tid, &fop);
-    sprintf(message, "received from AS: %s %s %s %c", command, uid, tid, fop);
+    sprintf(message, "message from AS: %s %s %s %c", command, uid, tid, fop);
     printv(message);
 
     if (!strcmp(command, "CNF")) {
@@ -501,7 +501,6 @@ void doOperation(char *buffer) {
             case 'E':
                 sendInvReply(fd, transactions[i]);
         }
-        printv("operation validated");
         transactions[i] = NULL;
     } else {
         n = write(fd, "ERR\n", 4);
