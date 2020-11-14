@@ -381,6 +381,9 @@ void uploadFile(Transaction trans) {
         if (n == -1) errorExit("write()");
     } while (count == 128);
 
+    n = write(fd_fs, "\n", 1);
+    if (n == -1) errorExit("write()");
+
     fclose(file);
     trans->pending = TRUE;
 }

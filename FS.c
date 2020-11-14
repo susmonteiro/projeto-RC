@@ -214,6 +214,7 @@ void listFiles(int fd, Transaction transaction) {
             }
         }
         closedir(d);
+        strcat(files, "\n");
     }
     if (n_files == 0) {
         write(fd, "RLS EOF\n", 8);
@@ -273,7 +274,7 @@ void retrieveFile(int fd, Transaction transaction) {
         if (n == -1) errorExit("write()");
     } while (count == 128);
 
-    n = write(fd, "\n\0", 1);
+    n = write(fd, "\n", 1);
     if (n == -1) errorExit("write()");
 
     fclose(file);
@@ -332,6 +333,8 @@ void uploadFile(int ind, Transaction transaction) {
             fputc(c, (FILE *)file);
     }
     if (file != NULL) fclose(file);
+
+    readGarbage(users[ind]->fd, size);
 
     sprintf(message, "%s stored for UID=%s", transaction->fname, transaction->uid);
     printv(message);
