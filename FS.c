@@ -359,7 +359,7 @@ void userSession(int ind) {
             break;
         }
     }
-    if (i == numTransactions + 1) {
+    if (i == numTransactions) {
         numTransactions++;
         transactions = (Transaction *)realloc(transactions, sizeof(Transaction) * (numTransactions));
         transactions[numTransactions] = NULL;
@@ -412,28 +412,28 @@ void userSession(int ind) {
     users[ind]->pending = TRUE;
 }
 
-void sendInvReply(Transaction transaction) {
-    /* int n;
-    char reply[8];
+void sendInvReply(int fd, Transaction transaction) {
+    int n;
+    char reply[9];
 
-    switch (transaction->fop) {
-    case 'L':
-        strcpy(reply, "RLS INV");
-        break;
-    case 'R':
-        strcpy(reply, "RRT INV");
-        break;
-    case 'U':
-        strcpy(reply, "RUP INV");
-        break;
-    case 'D':
-        strcpy(reply, "RDL INV");
-        break;
-    default:
-        strcpy(reply, "ERR");
+    switch (transaction->fop[0]) {
+        case 'L':
+            strcpy(reply, "RLS INV\n");
+            break;
+        case 'R':
+            strcpy(reply, "RRT INV\n");
+            break;
+        case 'U':
+            strcpy(reply, "RUP INV\n");
+            break;
+        case 'D':
+            strcpy(reply, "RDL INV\n");
+            break;
+        default:
+            strcpy(reply, "ERR\n");
     }
     n = write(fd, reply, strlen(reply));
-    if (n == -1) printError("write()"); */
+    if (n == -1) printError("write()");
 }
 
 // receive message from AS
@@ -448,16 +448,20 @@ void doOperation(char *buffer) {
 
     if (!strcmp(command, "CNF")) {
         resetLastMessage();
-        for (i = 0; i < numTransactions; i++) {
+        printf("numTransactions: %d\n", numTransactions);
+        for (i = 0; i < numTransactions + 1; i++) {
             if (!strcmp(tid, transactions[i]->tid))
                 break;
         }
-        if (i == numTransactions) {
+
+        if (i == numTransactions + 1) {
+            /* n = write(fd, "ERR\n", 4);
+            if (n == -1) printError("doOperation: write()"); */
             printv("Error: Transaction was not found");
             return;
         }
 
-        for (j = 0; j < numClients; j++) {
+        for (j = 0; j < numClients + 1; j++) {
             if (!strcmp(users[j]->uid, uid)) {
                 fd = users[j]->fd;
                 break;
@@ -466,7 +470,7 @@ void doOperation(char *buffer) {
 
         if (j == numClients) {
             printv("Error: User does not exist");
-            for (j = 0; j < numClients; j++) {
+            for (j = 0; j < numClients + 1; j++) {
                 if (!strcmp(users[j]->uid, transactions[i]->uid)) {
                     sendNokReply(users[j]->fd, transactions[i]);
                     break;
@@ -491,7 +495,7 @@ void doOperation(char *buffer) {
                 removeAll(fd, transactions[i]);
                 break;
             case 'E':
-                sendInvReply(transactions[i]);
+                sendInvReply(fd, transactions[i]);
         }
         printv("operation validated");
         transactions[i] = NULL;
@@ -535,7 +539,8 @@ void fdManager() {
             continue;
         }
 
-        if (FD_ISSET(fd_udp, &rset)) { // receive message from AS
+        if (FD_ISSET(fd_udp, &rset)) {            // receive message from AS
+            printf("received message from AS\n"); //DEBUG
             n = recvfrom(fd_udp, buffer, 128, 0, (struct sockaddr *)&addr_udp, &addrlen_udp);
             if (n == -1) printError("main: recvfrom()");
             buffer[n] = '\0';
@@ -544,6 +549,7 @@ void fdManager() {
         }
 
         if (FD_ISSET(fd_tcp, &rset)) { // receive new connection from user
+            printf("received new user\n");
             for (i = 0; i < numClients + 1; i++) {
                 if (users[i] == NULL) {
                     users[i] = (User)malloc(sizeof(struct user));
