@@ -198,7 +198,7 @@ void validateRequest(char *message) {
 
 void fdManager() {
     int n;
-    char reply[32], buffer[32], command[6], tmpUid[7], tmpPass[10];
+    char reply[32], buffer[64], command[6], tmpUid[7], tmpPass[10];
 
     while (1) {
         FD_ZERO(&rset);
@@ -229,7 +229,7 @@ void fdManager() {
         }
 
         if (FD_ISSET(fd_udp, &rset)) { // server of AS
-            n = recvfrom(fd_udp, buffer, 32, 0, (struct sockaddr *)&addr_udp, &addrlen_udp);
+            n = recvfrom(fd_udp, buffer, 64, 0, (struct sockaddr *)&addr_udp, &addrlen_udp);
             if (n == -1) errorExit("recvfrom()");
             buffer[n] = '\0';
             validateRequest(buffer);

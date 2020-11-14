@@ -267,7 +267,9 @@ void retrieveFile(Transaction trans) {
     int n;
     char message[128];
 
-    if (isTransactionPending(trans)) return;
+    if (isTransactionPending(trans))  {
+        return;
+    }
     trans->fop = 'R';
 
     scanf("%s", trans->fname);
@@ -505,7 +507,7 @@ void removeUserReply(Transaction trans) {
 /*      === main code ===        */
 
 void fdManager(Request req, Transaction trans) {
-    char command[6], status[5], tmpUid[7], tmpPass[10];
+    char command[9], status[5], tmpUid[7], tmpPass[10];
 
     int n, maxfdp1;
 
