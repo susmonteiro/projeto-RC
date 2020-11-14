@@ -1,6 +1,5 @@
 #include "config.h"
 #include "connection.h"
-#include "error.h"
 #include <arpa/inet.h>
 #include <dirent.h>
 #include <errno.h>
@@ -21,6 +20,8 @@
 #define MINARGS 1
 
 #define MAX(a, b) a *(a > b) + b *(b >= a)
+
+void exitAS();
 
 typedef struct request {
     char uid[7];
@@ -63,6 +64,23 @@ char asport[8];
 void printv(char *message) {
     if (verbose)
         printf("%s\n", message);
+}
+
+/*      === error functions ===       */
+
+void errorExit(char *errorMessage) {
+    if (errno != 0)
+        printf("ERR: %s: %s\n", errorMessage, strerror(errno));
+    else
+        printf("ERR: %s\n", errorMessage);
+    exitAS();
+}
+
+void printError(char *errorMessage) {
+    if (errno != 0)
+        printf("ERR: %s: %s\nNot exiting...\n", errorMessage, strerror(errno));
+    else
+        printf("ERR: %s\nNot exiting...\n", errorMessage);
 }
 
 /*      === sighandler functions ===       */

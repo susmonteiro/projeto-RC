@@ -5,11 +5,11 @@ LDFLAGS=
 
 all: AS FS pd user
 
-AS: AS.c config.h error.c error.h connection.c connection.h
-	$(CC) $(CFLAGS) AS.c error.c connection.c -o AS
+AS: AS.c config.h connection.c connection.h
+	$(CC) $(CFLAGS) AS.c connection.c -o AS
 
-FS: FS.c config.h error.c error.h connection.c connection.h
-	$(CC) $(CFLAGS) FS.c error.c connection.c -o FS
+FS: FS.c config.h connection.c connection.h
+	$(CC) $(CFLAGS) FS.c connection.c -o FS
 
 pd: pd.c config.h connection.c connection.h
 	$(CC) $(CFLAGS) pd.c connection.c -o pd

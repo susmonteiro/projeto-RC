@@ -308,11 +308,10 @@ Request and reply messages:
 > sim, e terminar se não tiver feito
 
 #### Last Day:
-- prints do verbose do AS e FS
+- remove commented code
+- prints do verbose do AS têm um \n a mais para mensagens recebidas
 - user invalid command sometimes (val)
-- signal inside funções bloqueantes?
 - AS and FS should die on invalid message
-- verificar que sempre que os programas morrem eles chama a função exit respetiva (e não exit(0) normal) -> ficheiro error.c e' preciso?
 - correr os scripts 
 - preencher excel
 - prettify everything :)
@@ -320,7 +319,6 @@ Request and reply messages:
 - verificar mais do que um user em simultaneo
 - correr no sigma cenas em máquinas diferentes
 - comentarios de acordo com o user e o pd
-- segfaults do AS e verificar que os servidores nunca morrem por culpa dos clientes
 - confirmar mensagens com o enunciado
 
 

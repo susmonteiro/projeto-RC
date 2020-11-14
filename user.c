@@ -112,6 +112,7 @@ void readUntilSpace(int fd, char *buffer) {
             closeConnections();
         }
         buffer[i++] = c;
+        if (endUser) closeConnections();
     } while (c != ' ' && c != '\n');
     buffer[--i] = '\0';
 }

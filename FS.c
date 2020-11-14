@@ -1,6 +1,5 @@
 #include "config.h"
 #include "connection.h"
-#include "error.h"
 #include <arpa/inet.h>
 #include <dirent.h>
 #include <errno.h>
@@ -20,6 +19,8 @@
 #define MINARGS 1
 
 #define MAX(a, b) a *(a > b) + b *(b >= a)
+
+void exitFS();
 
 typedef struct user {
     int fd;
@@ -59,6 +60,23 @@ char fsport[8], asport[8], asip[32];
 // print if verbose mode
 void printv(char *message) { // TODO move to common file
     if (verbose == TRUE) printf("%s\n", message);
+}
+
+/*      === error functions ===       */
+
+void errorExit(char *errorMessage) {
+    if (errno != 0)
+        printf("ERR: %s: %s\n", errorMessage, strerror(errno));
+    else
+        printf("ERR: %s\n", errorMessage);
+    exitFS();
+}
+
+void printError(char *errorMessage) {
+    if (errno != 0)
+        printf("ERR: %s: %s\nNot exiting...\n", errorMessage, strerror(errno));
+    else
+        printf("ERR: %s\nNot exiting...\n", errorMessage);
 }
 
 void readGarbage(int fd, int size) {
@@ -127,7 +145,6 @@ void resendMessage() {
 
 int readUntilSpace(int ind, char *buffer) { // TODO function common to other files?
     char c;
-    //char path[64];
     int i = 0, n = 0, count = 0;
     do {
         n = read(users[ind]->fd, &c, 1);
@@ -139,6 +156,7 @@ int readUntilSpace(int ind, char *buffer) { // TODO function common to other fil
             return count;
         }
         buffer[i++] = c;
+        if (endFS) exitFS();
     } while (c != ' ' && c != '\0' && c != '\n');
     buffer[--i] = '\0';
 
@@ -247,7 +265,7 @@ void retrieveFile(int fd, Transaction transaction) {
     sprintf(message, "file %s retrieved for user %s", transaction->fname, transaction->uid);
     printv(message);
 
-    sprintf(message, "RRT OK %d ", fsize+1);
+    sprintf(message, "RRT OK %d ", fsize + 1);
     n = write(fd, message, strlen(message));
     if (n == -1) errorExit("write()");
 
