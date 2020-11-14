@@ -371,7 +371,7 @@ void uploadFile(Transaction trans) {
     fseek(file, 0, SEEK_END);
     fsize = ftell(file);
     fseek(file, 0, SEEK_SET);
-    sprintf(message, "UPL %s %s %s %d ", uid, trans->tid, trans->fname, fsize); // TODO
+    sprintf(message, "UPL %s %s %s %d ", uid, trans->tid, trans->fname, fsize);
     n = write(fd_fs, message, strlen(message));
     if (n == -1) errorExit("write()");
 

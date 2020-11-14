@@ -58,7 +58,7 @@ struct sockaddr_in addr_udp, addr_tcp;
 char fsport[8], asport[8], asip[32];
 
 // print if verbose mode
-void printv(char *message) { // TODO move to common file
+void printv(char *message) {
     if (verbose == TRUE) printf("%s\n", message);
 }
 
@@ -143,7 +143,7 @@ void resendMessage() {
 
 /*      === auxiliary functions ===       */
 
-int readUntilSpace(int ind, char *buffer) { // TODO function common to other files?
+int readUntilSpace(int ind, char *buffer) {
     char c;
     int i = 0, n = 0, count = 0;
     do {
@@ -226,7 +226,6 @@ void listFiles(int fd, Transaction transaction) {
 }
 
 void deleteFile(int fd, Transaction transaction) {
-    //TODO NOK, ERR
     char message[128], path[64];
     int n;
 
@@ -244,7 +243,6 @@ void deleteFile(int fd, Transaction transaction) {
 }
 
 void retrieveFile(int fd, Transaction transaction) {
-    //TODO RRT NOK, ERR
     int n, fsize, count;
     char message[128], buffer[128], path[64];
     FILE *file;
@@ -614,7 +612,7 @@ int main(int argc, char *argv[]) {
 
     for (i = MINARGS; i < argc; i++) {
         if (!strcmp(argv[i], "-v")) {
-            verbose = TRUE; // TODO move to common file
+            verbose = TRUE;
         } else if (!strcmp(argv[i], "-h")) {
             printf("Usage: %s [-q FSport] [-n ASIP] [-p ASport] [-v]\n", argv[0]);
             exit(0);
@@ -629,7 +627,7 @@ int main(int argc, char *argv[]) {
 
     mkdir("USERS", 0777);
 
-    udpConnect(asip, asport, &fd_udp, &res_udp); // TODO sera que conectamos com o as logo aqui?
+    udpConnect(asip, asport, &fd_udp, &res_udp);
 
     tcpOpenConnection(FSPORT, &fd_tcp, &res_tcp);
     if (listen(fd_tcp, 5) == -1) printError("TCP: listen()");
