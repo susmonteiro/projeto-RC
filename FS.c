@@ -479,8 +479,6 @@ void doOperation(char *buffer) {
         }
 
         if (i == numTransactions + 1) {
-            /* n = write(fd, "ERR\n", 4);
-            if (n == -1) printError("doOperation: write()"); */
             printv("Error: Transaction was not found");
             return;
         }

@@ -500,7 +500,6 @@ void fdManager() {
     while (1) {
         FD_ZERO(&rset);
         FD_SET(fd_udp, &rset);
-        // FD_SET(fd_udp_client, &rset);
         FD_SET(fd_tcp, &rset);
 
         for (i = 0; i < numClients; i++) {
@@ -510,7 +509,6 @@ void fdManager() {
             }
         }
 
-        // maxfdp1 = MAX(MAX(fd_tcp, fd_udp), fd_udp_client) + 1;
         maxfdp1 = MAX(fd_tcp, fd_udp);
 
         for (i = 0; i < numClients; i++) {
