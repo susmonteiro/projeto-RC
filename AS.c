@@ -150,10 +150,8 @@ char *login(User userInfo, char *uid, char *pass) {
     file = fopen(path, "w");
     fclose(file);
 
-    printv(uid);
     strcpy(userInfo->uid, uid);
     userInfo->uid[5] = '\0';
-    printv(uid);
     sprintf(message, "User: login ok, UID=%s", uid);
     printv(message);
     return "RLO OK\n";
@@ -200,8 +198,6 @@ void request(User userInfo, char *uid, char *rid, char *fop, char *fname) {
     fscanf(file, "%s\n%s", pdip, pdport);
     fclose(file);
 
-    printf("%s %s\n", pdip, pdport);
-
     udpConnect(pdip, pdport, &userInfo->pd_fd, &userInfo->pd_res);
 
     sprintf(vc, "%04d", rand() % 10000);
@@ -218,7 +214,6 @@ void request(User userInfo, char *uid, char *rid, char *fop, char *fname) {
 
     for (i = 0; i < numRequests + 1; i++) {
         if (requests[i] == NULL) {
-            printf("found an empty request\n");
             requests[i] = (Request)malloc(sizeof(struct request));
             strcpy(requests[i]->rid, rid);
             strcpy(requests[i]->uid, uid);
@@ -230,7 +225,6 @@ void request(User userInfo, char *uid, char *rid, char *fop, char *fname) {
     }
     if (i == numRequests + 1) {
         numRequests++;
-        printf("number of requests: %d\n", numRequests);
         requests = (Request *)realloc(requests, sizeof(Request) * (numRequests));
         requests[numRequests] = NULL;
     }
@@ -251,10 +245,8 @@ void requestReply(User userInfo) {
     recvfrom(userInfo->pd_fd, buffer, 32, 0, (struct sockaddr *)&addr_udp, &addrlen_udp);
 
     sscanf(buffer, "%s %s %s", command, uid, status);
-    puts(buffer);
 
     if (strcmp("RVC", command)) {
-        puts(command);
         strcpy(buffer, "ERR\n");
     } else if (strcmp(userInfo->uid, uid)) {
         strcpy(buffer, "RRQ EUSER\n");
@@ -277,7 +269,6 @@ void requestReply(User userInfo) {
     }
 
     resetLastMessage(userInfo);
-    printf("can i send messages momma? plsplspls %d\n", userInfo->confirmationPending);
 
     close(userInfo->pd_fd);
     freeaddrinfo(userInfo->pd_res);
@@ -329,7 +320,6 @@ void userSession(int ind) {
     if (n == -1) {
         printError("userSession: read()");
     } else if (n == 0) {
-        printf("entrei\n");
         close(users[ind]->fd);
         if (strlen(users[ind]->uid) > 0) {
             sprintf(path, "USERS/UID%s/UID%s_login.txt", users[ind]->uid, users[ind]->uid);
@@ -420,8 +410,6 @@ char *validateOperation(char *uid, char *tid) {
     struct dirent *dir;
     DIR *d;
 
-    printf("inside validate operation\n");
-
     reply = (char *)malloc(128 * sizeof(char));
 
     for (i = 0; i < numRequests + 1; i++) {
@@ -483,7 +471,6 @@ char *validateOperation(char *uid, char *tid) {
 char *applyCommand(char *message) {
     char command[5], arg1[32], arg2[32], arg3[32], arg4[32];
     char msg[64];
-    printf("inside applyCommand\n");
     sprintf(msg, "message from PD or FS: %s", message);
     printv(msg);
     sscanf(message, "%s %s %s %s %s", command, arg1, arg2, arg3, arg4);
@@ -492,7 +479,6 @@ char *applyCommand(char *message) {
     } else if (!strcmp(command, "UNR")) {
         return unregistration(arg1, arg2);
     } else if (!strcmp(command, "VLD")) {
-        printf("going to validate operation\n");
         return validateOperation(arg1, arg2);
     } else {
         return "ERR\n";
