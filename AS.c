@@ -510,7 +510,7 @@ void fdManager() {
     char buffer[128];
     int i, n, maxfdp1;
     while (1) {
-        //printf("inside select\n");
+        printf("inside select\n");
 
         FD_ZERO(&rset);
         FD_SET(fd_udp, &rset);
@@ -556,11 +556,11 @@ void fdManager() {
                 printError("main: sendto()");
         }
 
+        printf("xixicoco\n"); // DEBUG
         if (FD_ISSET(fd_tcp, &rset)) { // receive user connections
-            printf("received tcp connection\n");
+            printf("received tcp connection\n"); // DEBUG
             for (i = 0; i < numClients + 1; i++) {
                 if (users[i] == NULL) {
-                    printf("creating user\n"); //DEBUG
                     users[i] = (User)malloc(sizeof(struct user));
                     users[i]->confirmationPending = FALSE;
                     if ((users[i]->fd = accept(fd_tcp, (struct sockaddr *)&addr_tcp, &addrlen_tcp)) == -1) printError("main: accept()");

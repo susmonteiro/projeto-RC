@@ -553,9 +553,9 @@ void fdManager() {
                     break;
                 }
             }
-            if (i == numClients + 1) {
+            if (i == numClients) {
                 numClients++;
-                users = (User *)realloc(users, sizeof(User) * (numClients));
+                users = (User *)realloc(users, sizeof(User) * (numClients + 1));
                 users[numClients] = NULL;
             }
         }
