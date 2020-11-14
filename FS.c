@@ -224,14 +224,13 @@ void listFiles(int fd, Transaction transaction) {
             }
         }
         closedir(d);
-        strcat(files, "\n");
     }
     if (n_files == 0) {
         write(fd, "RLS EOF\n", 8);
     } else {
         sprintf(message, "list operation successful for UID=%s", transaction->uid);
         printv(message);
-        sprintf(reply, "RLS %d %s\n", n_files, files);
+        sprintf(reply, "RLS %d%s\n", n_files, files);
         write(fd, reply, strlen(reply));
     }
 }
