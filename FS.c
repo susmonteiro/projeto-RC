@@ -281,12 +281,13 @@ void uploadFile(int ind, Transaction transaction) {
                 if (n == -1) errorExit("write()");
                 return;
             }
-            n_files++;
+            if (strcmp(dir->d_name, ".") && strcmp(dir->d_name, ".."))
+                n_files++;
         }
         closedir(d);
     }
 
-    if (n_files == 15) {
+    if (n_files >= 15) {
         readGarbage(users[ind]->fd, size);
         n = write(users[ind]->fd, "RUP FULL\n", 9);
         if (n == -1) errorExit("write()");
