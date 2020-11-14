@@ -1,3 +1,14 @@
+/* Authentication Server (AS) 
+ 
+invoked with:
+    ./AS [-p ASport] [-v]
+
+The AS makes available two server applications, one in UDP and the other in TCP, both 
+with well-known port ASport, to answer requests from the PD and the FS (in UDP), 
+and the User (in TCP) applications.
+
+*/
+
 #include "config.h"
 #include "connection.h"
 #include <arpa/inet.h>
