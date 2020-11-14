@@ -1,3 +1,13 @@
+/* File Server (FS)
+ 
+invoked with:
+    ./FS [-q FSport] [-n ASIP] [-p ASport] [-v]
+
+The FS server accepts TCP requests on the well-known port FSport, to answer User 
+requests.
+
+*/
+
 #include "config.h"
 #include "connection.h"
 #include <arpa/inet.h>
