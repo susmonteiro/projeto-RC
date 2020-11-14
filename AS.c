@@ -329,7 +329,7 @@ char *secondAuth(char *uid, char *rid, char *vc) {
 
 void userSession(int ind) {
     int n;
-    char buffer[128], msg[256], path[128], command[5], uid[32], rid[32], fop[32], vc[32], fname[32];
+    char buffer[128], path[128], command[5], uid[32], rid[32], fop[32], vc[32], fname[32];
 
     n = read(users[ind]->fd, buffer, 128);
     if (n == -1) {
@@ -344,10 +344,7 @@ void userSession(int ind) {
         users[ind] = NULL;
         return;
     }
-
     buffer[n] = '\0';
-    sprintf(msg, "message from User: %s", buffer);
-    printv(msg);
 
     sscanf(buffer, "%s", command);
     if (!strcmp(command, "LOG")) {
@@ -484,9 +481,7 @@ char *validateOperation(char *uid, char *tid) {
 
 char *applyCommand(char *message) {
     char command[5], arg1[32], arg2[32], arg3[32], arg4[32];
-    char msg[64];
-    sprintf(msg, "message from PD or FS: %s", message);
-    printv(msg);
+
     sscanf(message, "%s %s %s %s %s", command, arg1, arg2, arg3, arg4);
     if (!strcmp(command, "REG")) {
         return registration(arg1, arg2, arg3, arg4);

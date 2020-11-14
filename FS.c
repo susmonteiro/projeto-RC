@@ -393,9 +393,6 @@ void userSession(int ind) {
         transactions[numTransactions] = NULL;
     }
 
-    sprintf(message, "message from User: %s %s %s %s", command, uid, tid, transactions[i]->fop);
-    printv(message);
-
     if (!strcmp(command, "RTV") || !strcmp(command, "DEL")) {
         if (!strcmp(command, "RTV")) {
             strcpy(type, "retrieve");
@@ -463,13 +460,11 @@ void sendInvReply(int fd, Transaction transaction) {
 
 // receive message from AS
 void doOperation(char *buffer) {
-    char uid[7], tid[6], command[5], message[64];
+    char uid[7], tid[6], command[5];
     int n, i, j, fd = 0;
     char fop;
 
     sscanf(buffer, "%s %s %s %c", command, uid, tid, &fop);
-    sprintf(message, "message from AS: %s %s %s %c", command, uid, tid, fop);
-    printv(message);
 
     if (!strcmp(command, "CNF")) {
         resetLastMessage();
