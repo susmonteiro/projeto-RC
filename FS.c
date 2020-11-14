@@ -185,7 +185,7 @@ void listFiles(int fd, Transaction transaction) {
                     fseek(file, 0, SEEK_END);
                     fsize = ftell(file);
                     fseek(file, 0, SEEK_SET);
-                    sprintf(message, "%s %d ", dir->d_name, fsize);
+                    sprintf(message, " %s %d", dir->d_name, fsize);
                     if (n_files == 0)
                         strcpy(files, message);
                     else
