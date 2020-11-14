@@ -319,6 +319,7 @@ void uploadFile(int user, Transaction transaction) {
     }
 
     if (n_files >= 15) {
+        readGarbage(users[user]->fd, size);
         n = write(users[user]->fd, "RUP FULL\n", 9);
         if (n == -1) errorExit("write()");
         return;
@@ -341,8 +342,6 @@ void uploadFile(int user, Transaction transaction) {
             fputc(c, (FILE *)file);
     }
     if (file != NULL) fclose(file);
-
-    readGarbage(users[user]->fd, size);
 
     sprintf(message, "%s stored for UID=%s", transaction->fname, transaction->uid);
     printv(message);
