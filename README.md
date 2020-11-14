@@ -309,8 +309,10 @@ Request and reply messages:
 
 #### Last Day:
 - prints do verbose do AS e FS
-- apagar DEBUG messages em todo o lado
-- FS e AS é suposto não mandarem NADA a não ser que estejam a correr em verbose
+- user invalid command sometimes (val)
+- AS seg fault (req U lists.c -> wrong val -> good val -> req U lists.c -> val)
+- user print new file destination?
+- AS and FS should die on invalid message
 - verificar que sempre que os programas morrem eles chama a função exit respetiva (e não exit(0) normal) -> ficheiro error.c e' preciso?
 - correr os scripts 
 - preencher excel
