@@ -310,7 +310,6 @@ Request and reply messages:
 #### Last Day:
 - prints do verbose do AS e FS
 - user invalid command sometimes (val)
-- AS seg fault (User 1: login -> req L; User 2: `^C`)
 - signal inside funções bloqueantes?
 - AS and FS should die on invalid message
 - verificar que sempre que os programas morrem eles chama a função exit respetiva (e não exit(0) normal) -> ficheiro error.c e' preciso?
