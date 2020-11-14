@@ -265,7 +265,7 @@ void retrieveFile(int fd, Transaction transaction) {
     sprintf(message, "file %s retrieved for user %s", transaction->fname, transaction->uid);
     printv(message);
 
-    sprintf(message, "RRT OK %d ", fsize + 1);
+    sprintf(message, "RRT OK %d ", fsize);
     n = write(fd, message, strlen(message));
     if (n == -1) errorExit("write()");
 
@@ -275,7 +275,7 @@ void retrieveFile(int fd, Transaction transaction) {
         if (n == -1) errorExit("write()");
     } while (count == 128);
 
-    n = write(fd, "\n", 1);
+    n = write(fd, "\n\0", 1);
     if (n == -1) errorExit("write()");
 
     fclose(file);
