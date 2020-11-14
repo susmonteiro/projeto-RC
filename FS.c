@@ -112,7 +112,6 @@ void assignLastMessage(char *message) {
     confirmationPending = TRUE;
     strcpy(lastMessage, message);
     alarm(2);
-
 }
 
 void resendMessage() {
@@ -182,7 +181,6 @@ void listFiles(int fd, Transaction transaction) {
             if (dir->d_name[0] != '.') {
                 sprintf(filepath, "%s/%s", dirpath, dir->d_name);
                 if (access(filepath, F_OK) != -1) {
-                    printf("%s\n", dir->d_name);
                     file = fopen(filepath, "r");
                     fseek(file, 0, SEEK_END);
                     fsize = ftell(file);
@@ -192,7 +190,6 @@ void listFiles(int fd, Transaction transaction) {
                         strcpy(files, message);
                     else
                         strcat(files, message);
-                    printf("%s\n", files);
                     n_files++;
                     fclose(file);
                 }
@@ -206,7 +203,6 @@ void listFiles(int fd, Transaction transaction) {
         sprintf(message, "list operation successful for UID=%s", transaction->uid);
         printv(message);
         sprintf(reply, "RLS %d %s\n", n_files, files);
-        printv(reply);
         write(fd, reply, strlen(reply));
     }
 }
@@ -396,10 +392,8 @@ void userSession(int ind) {
         strcpy(transactions[i]->fname, fname);
 
     } else if (!strcmp(command, "UPL")) {
-        printf("received upload request from user\n");
         if (!readUntilSpace(ind, fname)) return;
         if (!readUntilSpace(ind, fsize)) return;
-        //sscanf(buffer, "%s %s %s %s %s", command, uid, tid, fname, fsize);
         sprintf(buffer, "UID=%s: upload %s (%s Bytes)", uid, fname, fsize);
         strcpy(transactions[i]->fop, "U");
         strcpy(transactions[i]->fname, fname);
@@ -415,7 +409,6 @@ void userSession(int ind) {
         sprintf(buffer, "UID=%s: %s", uid, type);
     }
 
-    printv(buffer);
     sprintf(message, "VLD %s %s\n", uid, tid);
     n = sendto(fd_udp, message, strlen(message), 0, res_udp->ai_addr, res_udp->ai_addrlen);
     if (n == -1) printError("validateOperation: sendto()");
@@ -460,7 +453,6 @@ void doOperation(char *buffer) {
 
     if (!strcmp(command, "CNF")) {
         resetLastMessage();
-        printf("numTransactions: %d\n", numTransactions);
         for (i = 0; i < numTransactions + 1; i++) {
             if (!strcmp(tid, transactions[i]->tid))
                 break;
@@ -551,7 +543,7 @@ void fdManager() {
             continue;
         }
 
-        if (FD_ISSET(fd_udp, &rset)) {            // receive message from AS
+        if (FD_ISSET(fd_udp, &rset)) { // receive message from AS
             n = recvfrom(fd_udp, buffer, 128, 0, (struct sockaddr *)&addr_udp, &addrlen_udp);
             if (n == -1) printError("main: recvfrom()");
             buffer[n] = '\0';
@@ -560,7 +552,6 @@ void fdManager() {
         }
 
         if (FD_ISSET(fd_tcp, &rset)) { // receive new connection from user
-            printf("received new user\n");
             for (i = 0; i < numClients + 1; i++) {
                 if (users[i] == NULL) {
                     users[i] = (User)malloc(sizeof(struct user));
@@ -576,7 +567,7 @@ void fdManager() {
                 users[numClients] = NULL;
             }
         }
-        if (!confirmationPending) { // receive message from User only if FS can communicate with AS
+        if (!confirmationPending) {            // receive message from User only if FS can communicate with AS
             for (i = 0; i < numClients; i++) { // receive command from User
                 if (users[i] != NULL && !users[i]->pending) {
                     if (FD_ISSET(users[i]->fd, &rset)) {
