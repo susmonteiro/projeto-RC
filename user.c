@@ -267,7 +267,7 @@ void retrieveFile(Transaction trans) {
     int n;
     char message[128];
 
-    if (isTransactionPending(trans))  {
+    if (isTransactionPending(trans)) {
         return;
     }
     trans->fop = 'R';
@@ -289,7 +289,7 @@ void retrieveFile(Transaction trans) {
 }
 
 void retrieveFileReply(Transaction trans) {
-    char c, status[64], fsize[32];
+    char c, status[64], fsize[32], dirpath[256];
     int n, i, numChars;
     FILE *file;
 
@@ -342,6 +342,10 @@ void retrieveFileReply(Transaction trans) {
             fputc(c, (FILE *)file);
     }
     if (file != NULL) fclose(file);
+
+    if (!(getcwd(dirpath, sizeof(dirpath)) == NULL)) {
+        printf("File retrieved to %s\n", dirpath);
+    }
 }
 
 void uploadFile(Transaction trans) {
