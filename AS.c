@@ -239,10 +239,8 @@ void request(User userInfo, char *uid, char *rid, char *fop, char *fname) {
 void requestReply(User userInfo) {
     char buffer[64], command[8], uid[8], status[8];
     int i, n, allGoodMyDude = FALSE;
-    socklen_t addrlen_udp;
-    struct sockaddr_in addr_udp;
 
-    recvfrom(userInfo->pd_fd, buffer, 32, 0, (struct sockaddr *)&addr_udp, &addrlen_udp);
+    recvfrom(userInfo->pd_fd, buffer, 64, 0, (struct sockaddr *)&addr_udp, &addrlen_udp);
 
     sscanf(buffer, "%s %s %s", command, uid, status);
 
@@ -313,7 +311,7 @@ char *secondAuth(char *uid, char *rid, char *vc) {
 
 void userSession(int ind) {
     int n;
-    char buffer[128], msg[256], path[64], command[5], uid[32], rid[32], fop[32], vc[32], fname[32];
+    char buffer[128], msg[256], path[128], command[5], uid[32], rid[32], fop[32], vc[32], fname[32];
 
     n = read(users[ind]->fd, buffer, 128);
     if (n == -1) {
@@ -505,7 +503,9 @@ void fdManager() {
         for (i = 0; i < numClients; i++) {
             if (users[i] != NULL) {
                 maxfdp1 = MAX(maxfdp1, users[i]->fd);
-                maxfdp1 = MAX(maxfdp1, users[i]->pd_fd);
+                if (users[i]->confirmationPending) {
+                    maxfdp1 = MAX(maxfdp1, users[i]->pd_fd);
+                }
             }
         }
 
@@ -537,6 +537,7 @@ void fdManager() {
                     users[i] = (User)malloc(sizeof(struct user));
                     users[i]->confirmationPending = FALSE;
                     users[i]->fd = fd;
+                    strcpy(users[i]->uid, "");
                     break;
                 }
             }
@@ -546,17 +547,15 @@ void fdManager() {
                 users[numClients] = NULL;
             }
         }
-        for (i = 0; i < numClients; i++) {
-
+        for (i = 0; i < numClients + 1; i++) {
             if (users[i] != NULL) {
+                if (users[i]->confirmationPending && FD_ISSET(users[i]->pd_fd, &rset)) { // message from PD
+                    requestReply(users[i]);
+                }
                 if (FD_ISSET(users[i]->fd, &rset)) {      // message from user
                     if (!users[i]->confirmationPending) { // does not read message if cannot communicate with PD
                         userSession(i);
-                    } else {
                     }
-                }
-                if (users[i] != NULL && FD_ISSET(users[i]->pd_fd, &rset)) { // message from PD
-                    requestReply(users[i]);
                 }
             }
         }
