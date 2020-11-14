@@ -291,7 +291,7 @@ void uploadFile(int ind, Transaction transaction) {
 
     sprintf(dirpath, "USERS/UID%s", transaction->uid);
     mkdir(dirpath, 0777);
-    printf(dirpath, "USERS/UID%s/FILES", transaction->uid);
+    sprintf(dirpath, "USERS/UID%s/FILES", transaction->uid);
     mkdir(dirpath, 0777);
     d = opendir(dirpath);
     if (d) {
