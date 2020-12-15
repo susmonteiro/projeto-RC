@@ -260,7 +260,7 @@ void listFilesReply(Transaction trans) {
         readUntilSpace(fd_fs, fsize);
         printf("%d)\t%24s\t%10s Bytes\n", i, filename, fsize);
     }
-    read(fd_fs, filename, 1);
+    //read(fd_fs, filename, 1);
 }
 
 void retrieveFile(Transaction trans) {
